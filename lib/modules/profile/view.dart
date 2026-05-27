@@ -9,22 +9,15 @@ import '../../widgets/shimmer_loader.dart';
 import '../../widgets/text_link_button.dart';
 import 'controller.dart';
 
-class ProfileView extends GetView<ProfileController> {
+class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: Text('Profile', style: AppTextStyles.titleMedium),
-        backgroundColor: AppColors.bgPrimary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: Obx(() {
+    final controller = Get.find<ProfileController>();
+    return SafeArea(
+      bottom: false,
+      child: Obx(() {
         if (controller.isLoading.value) {
           return const Padding(
             padding: EdgeInsets.all(24),
@@ -35,113 +28,119 @@ class ProfileView extends GetView<ProfileController> {
         final user = controller.user.value;
         if (user == null) return const SizedBox.shrink();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Identity card
-              _IdentityCard(),
+        return RefreshIndicator(
+          color: AppColors.accentPurple,
+          backgroundColor: AppColors.surface,
+          onRefresh: controller.refresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
 
-              const SizedBox(height: 28),
+                // Identity card
+                _IdentityCard(controller: controller),
 
-              // Settings section
-              Text(
-                'SETTINGS',
-                style: AppTextStyles.labelSmall.copyWith(letterSpacing: 1.5),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 28),
 
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border, width: 0.5),
+                // Settings section
+                Text(
+                  'SETTINGS',
+                  style: AppTextStyles.labelSmall.copyWith(letterSpacing: 1.5),
                 ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: SettingsRow(
-                        icon: Icons.workspace_premium_outlined,
-                        label: 'Subscription & access',
-                        onTap: controller.goToSubscription,
+                const SizedBox(height: 8),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 0.5),
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SettingsRow(
+                          icon: Icons.workspace_premium_outlined,
+                          label: 'Subscription & access',
+                          onTap: controller.goToSubscription,
+                        ),
                       ),
-                    ),
-                    const Divider(height: 0, indent: 16, endIndent: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: SettingsRow(
-                        icon: Icons.shield_outlined,
-                        label: 'Privacy settings',
-                        onTap: controller.showPrivacyPolicy,
+                      const Divider(height: 0, indent: 16, endIndent: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SettingsRow(
+                          icon: Icons.shield_outlined,
+                          label: 'Privacy settings',
+                          onTap: controller.showPrivacyPolicy,
+                        ),
                       ),
-                    ),
-                    const Divider(height: 0, indent: 16, endIndent: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: SettingsRow(
-                        icon: Icons.info_outline_rounded,
-                        label: 'About & data policy',
-                        onTap: controller.showAbout,
+                      const Divider(height: 0, indent: 16, endIndent: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: SettingsRow(
+                          icon: Icons.info_outline_rounded,
+                          label: 'About & data policy',
+                          onTap: controller.showAbout,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 28),
+                const SizedBox(height: 28),
 
-              // Divider
-              const Divider(color: AppColors.border, thickness: 0.5),
+                const Divider(color: AppColors.border, thickness: 0.5),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Destructive section
-              Text(
-                'DANGER ZONE',
-                style: AppTextStyles.labelSmall.copyWith(
-                  letterSpacing: 1.5,
-                  color: AppColors.destructive.withValues(alpha: 0.6),
+                // Danger zone
+                Text(
+                  'DANGER ZONE',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    letterSpacing: 1.5,
+                    color: AppColors.destructive.withValues(alpha: 0.6),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border, width: 0.5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 0.5),
+                  ),
+                  child: Column(
+                    children: [
+                      DestructiveRow(
+                        label: 'Clear all local data',
+                        onTap: controller.clearLocalData,
+                      ),
+                      const Divider(height: 0),
+                      DestructiveRow(
+                        label: 'Remove this identity',
+                        onTap: controller.removeIdentity,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    DestructiveRow(
-                      label: 'Clear all local data',
-                      onTap: controller.clearLocalData,
-                    ),
-                    const Divider(height: 0),
-                    DestructiveRow(
-                      label: 'Remove this identity',
-                      onTap: controller.removeIdentity,
-                    ),
-                  ],
+
+                const SizedBox(height: 32),
+
+                Center(
+                  child: TextLinkButton(
+                    label: 'Log out',
+                    onPressed: controller.confirmLogout,
+                    color: AppColors.destructive.withValues(alpha: 0.8),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 32),
-
-              // End session
-              Center(
-                child: TextLinkButton(
-                  label: 'End session',
-                  onPressed: controller.endSession,
-                  color: AppColors.textSecondary.withValues(alpha: 0.6),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         );
       }),
@@ -150,13 +149,12 @@ class ProfileView extends GetView<ProfileController> {
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard();
-
-  ProfileController get c => Get.find<ProfileController>();
+  final ProfileController controller;
+  const _IdentityCard({required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    final user = c.user.value;
+    final user = controller.user.value;
     if (user == null) return const SizedBox.shrink();
 
     return Container(
@@ -169,10 +167,8 @@ class _IdentityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: avatar placeholder + tier badge
           Row(
             children: [
-              // Avatar circle
               Container(
                 width: 48,
                 height: 48,
@@ -186,26 +182,19 @@ class _IdentityCard extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    user.alias.isNotEmpty
-                        ? user.alias[0].toUpperCase()
-                        : '?',
+                    user.alias.isNotEmpty ? user.alias[0].toUpperCase() : '?',
                     style: AppTextStyles.titleLarge.copyWith(
                       color: AppColors.accentPurple,
                     ),
                   ),
                 ),
               ),
-
               const SizedBox(width: 14),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      user.alias,
-                      style: AppTextStyles.titleMedium,
-                    ),
+                    Text(user.alias, style: AppTextStyles.titleMedium),
                     const SizedBox(height: 4),
                     AccessTierBadge(
                       tier: user.isPremium ? AccessTier.plus : AccessTier.free,
@@ -215,8 +204,6 @@ class _IdentityCard extends StatelessWidget {
               ),
             ],
           ),
-
-          // Generated username (if premium)
           if (user.generatedUsername != null &&
               user.generatedUsername!.isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -227,30 +214,16 @@ class _IdentityCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.border, width: 0.5),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Generated username',
-                          style: AppTextStyles.caption,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          user.generatedUsername!,
-                          style: AppTextStyles.mono,
-                        ),
-                      ],
-                    ),
-                  ),
+                  Text('Generated username', style: AppTextStyles.caption),
+                  const SizedBox(height: 4),
+                  Text(user.generatedUsername!, style: AppTextStyles.mono),
                 ],
               ),
             ),
           ],
-
-          // Plan info (if premium)
           if (user.isPremium && user.expiryDate != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -263,14 +236,12 @@ class _IdentityCard extends StatelessWidget {
     );
   }
 
-  String _planLabel(String? planType) {
-    return switch (planType) {
-      'daily' => 'Daily',
-      'weekly' => 'Weekly',
-      'monthly' => 'Monthly',
-      _ => 'Free',
-    };
-  }
+  String _planLabel(String? planType) => switch (planType) {
+        'daily' => 'Daily',
+        'weekly' => 'Weekly',
+        'monthly' => 'Monthly',
+        _ => 'Free',
+      };
 
   String _formatDate(String isoDate) {
     try {

@@ -25,7 +25,6 @@ class ProfileController extends GetxController {
     debugPrint('[ProfileController] _loadUser called');
     isLoading.value = true;
     try {
-      // Try fresh profile from API first, falls back to storage inside repo
       final loaded = await _userRepo.fetchProfile();
       user.value = loaded;
       debugPrint('[ProfileController] Loaded user: ${user.value}');
@@ -36,6 +35,9 @@ class ProfileController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  @override
+  Future<void> refresh() => _loadUser();
 
   void goToSubscription() => Get.toNamed(AppRoutes.premium);
 
@@ -157,24 +159,48 @@ class ProfileController extends GetxController {
     );
   }
 
-  /// Calls logout API, clears storage, navigates to onboarding.
+  /// Calls logout API, clears storage, navigates to login.
   Future<void> _performLogout() async {
     debugPrint('[ProfileController] _performLogout called');
     try {
       await _userRepo.logout();
-      debugPrint('[ProfileController] Logout complete — navigating to onboarding');
+      debugPrint('[ProfileController] Logout complete — navigating to login');
       AppSnackbar.success('Logged out successfully.');
       await Future.delayed(const Duration(milliseconds: 400));
-      Get.offAllNamed(AppRoutes.onboarding);
     } catch (e) {
       debugPrint('[ProfileController] Logout error: $e');
-      // Even on error, clear locally and redirect
-      Get.offAllNamed(AppRoutes.onboarding);
+    } finally {
+      Get.offAllNamed(AppRoutes.login);
     }
   }
 
-  void endSession() {
-    debugPrint('[ProfileController] endSession → home');
-    Get.back();
+  void confirmLogout() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF232329),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: const Text('Log out?',
+            style: TextStyle(color: Color(0xFFF0EEF4), fontSize: 17)),
+        content: const Text(
+          'You will be returned to the login screen.',
+          style: TextStyle(color: Color(0xFF8A8A9A), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF8A8A9A))),
+          ),
+          TextButton(
+            onPressed: () async {
+              Get.back();
+              await _performLogout();
+            },
+            child: const Text('Log out',
+                style: TextStyle(color: Color(0xFFC0392B))),
+          ),
+        ],
+      ),
+    );
   }
 }

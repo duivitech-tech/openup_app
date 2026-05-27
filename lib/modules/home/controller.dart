@@ -70,8 +70,10 @@ class HomeController extends GetxController {
   void onNavTap(int index) {
     debugPrint('[HomeController] Nav tapped: $index');
     currentNavIndex.value = index;
-    if (index == 1) Get.toNamed(AppRoutes.profile);
   }
+
+  @override
+  Future<void> refresh() => _loadData();
 
   void startChat() {
     debugPrint('[HomeController] startChat → navigating to Chat');
@@ -84,7 +86,7 @@ class HomeController extends GetxController {
   }
 
   void goToSettings() {
-    debugPrint('[HomeController] goToSettings → navigating to Profile');
-    Get.toNamed(AppRoutes.profile);
+    debugPrint('[HomeController] goToSettings → switching to Profile tab');
+    currentNavIndex.value = 1;
   }
 }

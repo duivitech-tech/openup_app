@@ -8,6 +8,8 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/private_id_card.dart';
 import 'controller.dart';
 
+export 'controller.dart' show AliasStatus;
+
 class IdentityView extends GetView<IdentityController> {
   const IdentityView({super.key});
 
@@ -79,6 +81,7 @@ class IdentityView extends GetView<IdentityController> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: controller.aliasController,
+                  focusNode: controller.aliasFocusNode,
                   validator: controller.validateAlias,
                   textInputAction: TextInputAction.next,
                   style: AppTextStyles.bodyMedium,
@@ -88,6 +91,29 @@ class IdentityView extends GetView<IdentityController> {
                     counterText: '',
                   ),
                 ),
+                const SizedBox(height: 4),
+                Obx(() {
+                  final status = controller.aliasStatus.value;
+                  if (status == AliasStatus.checking) {
+                    return Row(
+                      children: [
+                        const SizedBox(
+                          width: 10, height: 10,
+                          child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF8A8A9A)),
+                        ),
+                        const SizedBox(width: 6),
+                        Text('Checking…', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                      ],
+                    );
+                  }
+                  if (status == AliasStatus.available) {
+                    return Text('✓ Available', style: AppTextStyles.caption.copyWith(color: Color(0xFF4CAF50)));
+                  }
+                  if (status == AliasStatus.taken) {
+                    return Text('✗ Already taken', style: AppTextStyles.caption.copyWith(color: Color(0xFFE57373)));
+                  }
+                  return const SizedBox.shrink();
+                }),
 
                 const SizedBox(height: 20),
 

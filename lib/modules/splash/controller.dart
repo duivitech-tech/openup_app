@@ -1,8 +1,8 @@
 // lib/modules/splash/controller.dart
 // Navigation logic:
 // 1. No deviceId → Onboarding
-// 2. Has deviceId + auth token → Home (returning user)
-// 3. Has deviceId + alias but no token → Login (had local account, needs to re-authenticate)
+// 2. Has deviceId + userId → Home (returning authenticated user)
+// 3. Has deviceId + alias but no userId → Login (had local account, needs to re-authenticate)
 // 4. Has deviceId but no alias → Identity (new user)
 
 import 'package:flutter/foundation.dart';
@@ -58,22 +58,19 @@ class SplashController extends GetxController {
       return;
     }
 
-    // ── Step 2: Check auth token ──────────────────────────────────────────────
-    String? token;
+    // ── Step 2: Check userId (set on login/signup) ──────────────────────────
+    String? userId;
     try {
-      token = await _storage.getAuthToken();
-      debugPrint('[SplashController] token=${token != null ? "${token.substring(0, 8)}…" : "null"}');
+      userId = await _storage.getUserId();
+      debugPrint('[SplashController] userId=$userId');
     } catch (e) {
-      debugPrint('[SplashController] token read error: $e');
+      debugPrint('[SplashController] userId read error: $e');
     }
 
-    if (token != null && token.isNotEmpty) {
-      // Has valid token — returning authenticated user → Home
-      debugPrint('[SplashController] Token found — going Home');
-
-      // Kick off device sync in background (non-blocking)
+    if (userId != null && userId.isNotEmpty) {
+      // Has userId — returning authenticated user → Home
+      debugPrint('[SplashController] userId found — going Home');
       _deviceRepo.initDevice().ignore();
-
       Get.offAllNamed(AppRoutes.home);
       return;
     }

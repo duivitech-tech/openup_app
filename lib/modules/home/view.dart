@@ -6,6 +6,7 @@ import '../../themes/app_theme.dart';
 import '../../widgets/app_bottom_nav_bar.dart';
 import '../../widgets/home_dash_card.dart';
 import '../../widgets/text_link_button.dart';
+import '../profile/view.dart';
 import 'controller.dart';
 
 class HomeView extends GetView<HomeController> {
@@ -15,51 +16,13 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Top bar
-            _TopBar(),
-
-            // Main content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-
-                    // Main dashboard card
-                    Obx(() => HomeDashCard(
-                          isPremium: controller.isPremium.value,
-                          onStartTalking: controller.startChat,
-                        )),
-
-                    const SizedBox(height: 20),
-
-                    // Usage strip (hidden for premium)
-                    Obx(() {
-                      if (controller.isPremium.value) {
-                        return const SizedBox.shrink();
-                      }
-                      return _UsageStrip();
-                    }),
-
-                    const SizedBox(height: 28),
-
-                    // Tips section
-                    _TipsSection(),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // Bottom nav
+      body: Obx(() => IndexedStack(
+            index: controller.currentNavIndex.value,
+            children: const [
+              _HomeTab(),
+              ProfileView(),
+            ],
+          )),
       bottomNavigationBar: Obx(() => AppBottomNavBar(
             currentIndex: controller.currentNavIndex.value,
             onTap: controller.onNavTap,
@@ -68,42 +31,57 @@ class HomeView extends GetView<HomeController> {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  HomeController get c => Get.find<HomeController>();
+class _HomeTab extends StatelessWidget {
+  const _HomeTab();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
-        children: [
-          Obx(() => Text(
-                'hey, ${c.alias.value}',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+    final c = Get.find<HomeController>();
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        color: AppColors.accentPurple,
+        backgroundColor: AppColors.surface,
+        onRefresh: c.refresh,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Obx(() => Text(
+                          'hey, ${c.alias.value}',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        )),
+                  ],
                 ),
-              )),
-          const Spacer(),
-          GestureDetector(
-            onTap: c.goToSettings,
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.border, width: 0.5),
-              ),
-              child: const Icon(
-                Icons.settings_outlined,
-                size: 18,
-                color: AppColors.textSecondary,
               ),
             ),
-          ),
-        ],
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 12),
+                  Obx(() => HomeDashCard(
+                        isPremium: c.isPremium.value,
+                        onStartTalking: c.startChat,
+                      )),
+                  const SizedBox(height: 20),
+                  Obx(() {
+                    if (c.isPremium.value) return const SizedBox.shrink();
+                    return _UsageStrip();
+                  }),
+                  const SizedBox(height: 28),
+                  _TipsSection(),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -112,10 +90,9 @@ class _TopBar extends StatelessWidget {
 class _UsageStrip extends StatelessWidget {
   const _UsageStrip();
 
-  HomeController get c => Get.find<HomeController>();
-
   @override
   Widget build(BuildContext context) {
+    final c = Get.find<HomeController>();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -212,10 +189,11 @@ class _TipRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-              )),
+              Text(title,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  )),
               const SizedBox(height: 2),
               Text(subtitle, style: AppTextStyles.bodySmall),
             ],

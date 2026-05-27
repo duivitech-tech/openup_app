@@ -21,7 +21,7 @@ class UserRepository extends GetxService {
 
   // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-  /// Signs up a new user. Stores token + profile locally on success.
+  /// Signs up a new user. Stores userId + profile locally on success.
   Future<UserModel> signup({
     required String deviceId,
     required String alias,
@@ -35,14 +35,15 @@ class UserRepository extends GetxService {
         pin: pin,
       );
 
-      if (!response.success || response.token == null) {
-        debugPrint('[UserRepository] signup: success=false or no token — ${response.error}');
+      if (!response.success) {
+        debugPrint('[UserRepository] signup: success=false — ${response.error}');
         throw ServerException(response.error ?? 'Signup failed');
       }
 
-      debugPrint('[UserRepository] signup success — token=${response.token!.substring(0, 8)}…');
+      debugPrint('[UserRepository] signup success — userId=${response.userId}');
       await _persistAuthSession(
-        token: response.token!,
+        token: response.token ?? '',
+        userId: response.userId ?? '',
         alias: alias,
         pin: pin,
         user: response.user,
@@ -72,14 +73,15 @@ class UserRepository extends GetxService {
         pin: pin,
       );
 
-      if (!response.success || response.token == null) {
-        debugPrint('[UserRepository] login: success=false or no token — ${response.error}');
+      if (!response.success) {
+        debugPrint('[UserRepository] login: success=false — ${response.error}');
         throw ServerException(response.error ?? 'Login failed');
       }
 
-      debugPrint('[UserRepository] login success — token=${response.token!.substring(0, 8)}…');
+      debugPrint('[UserRepository] login success — userId=${response.userId}');
       await _persistAuthSession(
-        token: response.token!,
+        token: response.token ?? '',
+        userId: response.userId ?? '',
         alias: alias,
         pin: pin,
         user: response.user,
@@ -95,18 +97,18 @@ class UserRepository extends GetxService {
     }
   }
 
-  /// Fetches fresh profile from backend using stored token.
+  /// Fetches fresh profile from backend using stored userId.
   /// Falls back to storage on network failure.
   Future<UserModel?> fetchProfile() async {
     debugPrint('[UserRepository] fetchProfile called');
-    final token = await _storage.getAuthToken();
-    if (token == null || token.isEmpty) {
-      debugPrint('[UserRepository] fetchProfile: no token — returning storage fallback');
+    final userId = await _storage.getUserId();
+    if (userId == null || userId.isEmpty) {
+      debugPrint('[UserRepository] fetchProfile: no userId — returning storage fallback');
       return loadUserFromStorage();
     }
 
     try {
-      final user = await _apiService.fetchProfile(token);
+      final user = await _apiService.fetchProfile(userId);
       debugPrint('[UserRepository] fetchProfile success: ${user.alias}, isPremium=${user.isPremium}');
 
       // Persist fresh values
@@ -123,8 +125,8 @@ class UserRepository extends GetxService {
 
       return user;
     } on SessionExpiredException {
-      debugPrint('[UserRepository] fetchProfile: session expired — clearing token');
-      await _storage.deleteAuthToken();
+      debugPrint('[UserRepository] fetchProfile: session expired — clearing userId');
+      await _storage.deleteUserId();
       return loadUserFromStorage();
     } catch (e) {
       debugPrint('[UserRepository] fetchProfile network error ($e) — using cache');
@@ -135,18 +137,19 @@ class UserRepository extends GetxService {
   /// Logs out: hits logout API then clears all local data.
   Future<void> logout() async {
     debugPrint('[UserRepository] logout called');
-    final token = await _storage.getAuthToken();
-    if (token != null && token.isNotEmpty) {
+    final userId = await _storage.getUserId();
+    if (userId != null && userId.isNotEmpty) {
       try {
-        await _apiService.logout(token);
+        await _apiService.logout(userId);
         debugPrint('[UserRepository] logout API success');
       } catch (e) {
         debugPrint('[UserRepository] logout API error (ignoring): $e');
       }
     }
     await _storage.deleteAuthToken();
+    await _storage.deleteUserId();
     await _storage.clearUserData();
-    debugPrint('[UserRepository] logout: token + user data cleared');
+    debugPrint('[UserRepository] logout: token + userId + user data cleared');
   }
 
   // ─── Local storage ────────────────────────────────────────────────────────────
@@ -225,6 +228,7 @@ class UserRepository extends GetxService {
   Future<void> clearAllData() async {
     debugPrint('[UserRepository] clearAllData called');
     await _storage.deleteAuthToken();
+    await _storage.deleteUserId();
     await _storage.clearUserData();
   }
 
@@ -232,11 +236,13 @@ class UserRepository extends GetxService {
 
   Future<void> _persistAuthSession({
     required String token,
+    required String userId,
     required String alias,
     required String pin,
     UserModel? user,
   }) async {
-    await _storage.setAuthToken(token);
+    if (token.isNotEmpty) await _storage.setAuthToken(token);
+    if (userId.isNotEmpty) await _storage.setUserId(userId);
     await _storage.setNickname(alias);
     await _storage.setPin(pin);
     if (user != null) {
@@ -250,6 +256,6 @@ class UserRepository extends GetxService {
         await _storage.setMessagesLeft(user.messagesLeft!);
       }
     }
-    debugPrint('[UserRepository] Auth session persisted for alias=$alias');
+    debugPrint('[UserRepository] Auth session persisted for alias=$alias, userId=$userId');
   }
 }

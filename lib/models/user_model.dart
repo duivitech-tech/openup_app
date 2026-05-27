@@ -33,7 +33,8 @@ class UserModel {
     );
   }
 
-  /// Parse from GET /api/auth/profile response.
+  /// Parse from GET /api/user/profile response.
+  /// Shape: { id, name, deviceId, isPremium, subscriptionExpiry, messagesLeft, createdAt }
   factory UserModel.fromProfileJson(Map<String, dynamic> json) {
     // Support both flat and nested { user: {...} } structures
     final data = json.containsKey('user')
@@ -44,7 +45,7 @@ class UserModel {
       generatedUsername: data['generatedUsername'] as String?,
       isPremium: data['isPremium'] as bool? ?? false,
       planType: data['planType'] as String?,
-      expiryDate: data['expiryDate'] as String?,
+      expiryDate: data['expiryDate'] as String? ?? data['subscriptionExpiry'] as String?,
       messagesLeft: data['messagesLeft'] as int?,
     );
   }
@@ -77,24 +78,30 @@ class UserModel {
 class AuthResponse {
   final bool success;
   final String? token;
+  final String? userId;
   final UserModel? user;
   final String? error;
 
   const AuthResponse({
     required this.success,
     this.token,
+    this.userId,
     this.user,
     this.error,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     UserModel? user;
+    // Build user from response if it has name/alias fields (signup returns flat profile)
     if (json.containsKey('user') && json['user'] != null) {
+      user = UserModel.fromProfileJson(json);
+    } else if (json.containsKey('name') || json.containsKey('alias')) {
       user = UserModel.fromProfileJson(json);
     }
     return AuthResponse(
       success: json['success'] as bool? ?? false,
       token: json['token'] as String?,
+      userId: json['userId'] as String?,
       user: user,
       error: json['error'] as String?,
     );

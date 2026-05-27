@@ -21,13 +21,7 @@ class ApiService extends GetxService {
 
   Dio get _dio => _dioClient.dio;
 
-  // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-  /// Returns options with Bearer token if provided.
-  Options _authOptions(String? token) {
-    if (token == null || token.isEmpty) return Options();
-    return Options(headers: {'Authorization': 'Bearer $token'});
-  }
 
   // ─── Auth endpoints ───────────────────────────────────────────────────────────
 
@@ -43,7 +37,7 @@ class ApiService extends GetxService {
     try {
       final response = await _dio.post(
         ApiConstants.authSignup,
-        data: {'deviceId': deviceId, 'alias': alias, 'pin': pin},
+        data: {'deviceId': deviceId, 'name': alias, 'password': pin},
       );
       debugPrint('[ApiService] signup response: ${response.statusCode} ${response.data}');
       return AuthResponse.fromJson(response.data as Map<String, dynamic>);
@@ -68,7 +62,7 @@ class ApiService extends GetxService {
     try {
       final response = await _dio.post(
         ApiConstants.authLogin,
-        data: {'deviceId': deviceId, 'alias': alias, 'pin': pin},
+        data: {'name': alias, 'password': pin},
       );
       debugPrint('[ApiService] login response: ${response.statusCode} ${response.data}');
       return AuthResponse.fromJson(response.data as Map<String, dynamic>);
@@ -84,14 +78,14 @@ class ApiService extends GetxService {
     }
   }
 
-  /// GET /api/auth/profile (requires Bearer token)
-  /// Returns: { alias, isPremium, messagesLeft, planType, expiryDate, ... }
-  Future<UserModel> fetchProfile(String token) async {
-    debugPrint('[ApiService] GET ${ApiConstants.authProfile}');
+  /// GET /api/user/profile?userId=
+  /// Returns: { id, name, deviceId, isPremium, subscriptionExpiry, messagesLeft }
+  Future<UserModel> fetchProfile(String userId) async {
+    debugPrint('[ApiService] GET ${ApiConstants.userProfile}');
     try {
       final response = await _dio.get(
-        ApiConstants.authProfile,
-        options: _authOptions(token),
+        ApiConstants.userProfile,
+        queryParameters: {'userId': userId},
       );
       debugPrint('[ApiService] fetchProfile response: ${response.statusCode} ${response.data}');
       return UserModel.fromProfileJson(response.data as Map<String, dynamic>);
@@ -104,18 +98,19 @@ class ApiService extends GetxService {
     }
   }
 
-  /// POST /api/auth/logout (requires Bearer token)
-  Future<void> logout(String token) async {
-    debugPrint('[ApiService] POST ${ApiConstants.authLogout}');
+  /// POST /api/user/logout
+  /// Body: { userId }
+  Future<void> logout(String userId) async {
+    debugPrint('[ApiService] POST ${ApiConstants.userLogout}');
     try {
       final response = await _dio.post(
-        ApiConstants.authLogout,
-        options: _authOptions(token),
+        ApiConstants.userLogout,
+        data: {'userId': userId},
       );
       debugPrint('[ApiService] logout response: ${response.statusCode}');
     } on DioException catch (e) {
       debugPrint('[ApiService] logout DioException: ${e.response?.statusCode} — ignoring');
-      // Logout errors are non-fatal — always clear local token
+      // Logout errors are non-fatal — always clear local data
     }
   }
 

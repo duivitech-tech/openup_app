@@ -10,6 +10,8 @@ import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
 
+enum AliasStatus { idle, checking, available, taken }
+
 class IdentityController extends GetxController {
   late final UserRepository _userRepo;
   late final DeviceRepository _deviceRepo;
@@ -17,11 +19,13 @@ class IdentityController extends GetxController {
   final formKey = GlobalKey<FormState>();
   final aliasController = TextEditingController();
   final pinController = TextEditingController();
+  final aliasFocusNode = FocusNode();
 
   final alias = ''.obs;
   final pin = ''.obs;
   final pinVisible = false.obs;
   final isLoading = false.obs;
+  final aliasStatus = AliasStatus.idle.obs;
 
   String get previewId {
     final a = alias.value.isNotEmpty ? alias.value : 'alias';
@@ -36,13 +40,40 @@ class IdentityController extends GetxController {
     _deviceRepo = Get.find<DeviceRepository>();
     aliasController.addListener(() => alias.value = aliasController.text);
     pinController.addListener(() => pin.value = pinController.text);
+    aliasFocusNode.addListener(_onAliasFocusChange);
   }
 
   @override
   void onClose() {
     aliasController.dispose();
     pinController.dispose();
+    aliasFocusNode.removeListener(_onAliasFocusChange);
+    aliasFocusNode.dispose();
     super.onClose();
+  }
+
+  void _onAliasFocusChange() {
+    if (!aliasFocusNode.hasFocus) {
+      _checkAlias();
+    }
+  }
+
+  Future<void> _checkAlias() async {
+    final value = aliasController.text.trim();
+    if (value.isEmpty || Validators.validateAlias(value) != null) {
+      aliasStatus.value = AliasStatus.idle;
+      return;
+    }
+    debugPrint('[IdentityController] checking alias availability: $value');
+    aliasStatus.value = AliasStatus.checking;
+    try {
+      final available = await _userRepo.isNameAvailable(value);
+      aliasStatus.value = available ? AliasStatus.available : AliasStatus.taken;
+      debugPrint('[IdentityController] alias $value available=$available');
+    } catch (e) {
+      debugPrint('[IdentityController] alias check error: $e');
+      aliasStatus.value = AliasStatus.idle;
+    }
   }
 
   void togglePinVisibility() => pinVisible.toggle();
@@ -54,6 +85,20 @@ class IdentityController extends GetxController {
   Future<void> enterOpenUp() async {
     debugPrint('[IdentityController] enterOpenUp (signup) called');
     if (!formKey.currentState!.validate()) return;
+
+    if (aliasStatus.value == AliasStatus.taken) {
+      AppSnackbar.error('This alias is taken. Try another or log in.');
+      return;
+    }
+
+    // If not yet checked (user skipped focus-out), check now
+    if (aliasStatus.value == AliasStatus.idle) {
+      await _checkAlias();
+      if (aliasStatus.value == AliasStatus.taken) {
+        AppSnackbar.error('This alias is taken. Try another or log in.');
+        return;
+      }
+    }
 
     isLoading.value = true;
     try {
