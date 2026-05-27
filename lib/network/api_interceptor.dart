@@ -1,6 +1,7 @@
 // lib/network/api_interceptor.dart
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Response;
 import '../core/errors/app_exceptions.dart';
@@ -8,26 +9,40 @@ import '../core/errors/app_exceptions.dart';
 class ApiInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // ignore: avoid_print
-    print('[API] ${options.method} ${options.path}');
+    debugPrint('┌─────────────────────────────────────────────────────');
+    debugPrint('│ [HTTP] ➤ ${options.method} ${options.uri}');
+    if (options.data != null) {
+      debugPrint('│ [HTTP] Body: ${options.data}');
+    }
+    if (options.queryParameters.isNotEmpty) {
+      debugPrint('│ [HTTP] Params: ${options.queryParameters}');
+    }
+    debugPrint('└─────────────────────────────────────────────────────');
     handler.next(options);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    // ignore: avoid_print
-    print('[API] ${response.statusCode} ${response.requestOptions.path}');
+    debugPrint('┌─────────────────────────────────────────────────────');
+    debugPrint('│ [HTTP] ✓ ${response.statusCode} ${response.requestOptions.path}');
+    debugPrint('│ [HTTP] Response: ${response.data}');
+    debugPrint('└─────────────────────────────────────────────────────');
     handler.next(response);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // ignore: avoid_print
-    print('[API ERROR] ${err.response?.statusCode} ${err.requestOptions.path}');
+    debugPrint('┌─────────────────────────────────────────────────────');
+    debugPrint('│ [HTTP] ✗ ${err.response?.statusCode ?? 'NO_STATUS'} ${err.requestOptions.path}');
+    debugPrint('│ [HTTP] Type: ${err.type}');
+    debugPrint('│ [HTTP] Message: ${err.message}');
+    if (err.response?.data != null) {
+      debugPrint('│ [HTTP] Error body: ${err.response?.data}');
+    }
+    debugPrint('└─────────────────────────────────────────────────────');
 
     final statusCode = err.response?.statusCode;
 
-    // Network/timeout errors
     if (err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.receiveTimeout ||
         err.type == DioExceptionType.sendTimeout) {
@@ -55,10 +70,8 @@ class ApiInterceptor extends Interceptor {
       return;
     }
 
-    // HTTP error codes
     switch (statusCode) {
       case 403:
-        // Let the calling service handle — reject with typed error
         handler.reject(
           DioException(
             requestOptions: err.requestOptions,
@@ -71,13 +84,13 @@ class ApiInterceptor extends Interceptor {
 
       case 400:
       case 402:
-        // Bad request / payment required — pass through for controllers to handle
+        // Pass through for the calling service to handle
         handler.next(err);
         return;
 
       case 500:
       case 503:
-        _showErrorSnackbar('Something went wrong. Try again later.');
+        _showErrorSnackbar('Something went wrong on our side. Try again.');
         break;
 
       default:

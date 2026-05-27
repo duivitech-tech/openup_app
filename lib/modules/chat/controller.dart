@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -31,6 +32,7 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    debugPrint('[ChatController] onInit');
     _deviceRepo = Get.find<DeviceRepository>();
     _storage = Get.find<StorageService>();
 
@@ -38,7 +40,6 @@ class ChatController extends GetxController {
       inputText.value = inputController.text;
     });
 
-    // Add initial AI greeting
     _addInitialGreeting();
   }
 
@@ -61,6 +62,8 @@ class ChatController extends GetxController {
     final text = inputController.text.trim();
     if (text.isEmpty || !isSendEnabled.value) return;
 
+    debugPrint('[ChatController] sendMessage: "$text"');
+
     // Clear input immediately
     inputController.clear();
     inputText.value = '';
@@ -75,14 +78,16 @@ class ChatController extends GetxController {
     try {
       // Check message quota with backend BEFORE sending
       final isPremium = await _storage.getIsPremium();
+      debugPrint('[ChatController] isPremium=$isPremium — checking deduct');
 
       if (!isPremium) {
+        debugPrint('[ChatController] Calling deductMessage…');
         final deductResult = await _deviceRepo.deductMessage();
+        debugPrint('[ChatController] deductMessage result: allowed=${deductResult.allowed}, left=${deductResult.messagesLeft}');
 
         if (!deductResult.allowed) {
-          // Update message status to failed
+          debugPrint('[ChatController] Quota exceeded → PaywallException');
           _updateMessageStatus(userMsg.id, MessageStatus.failed);
-          // Navigate to paywall
           Get.toNamed(AppRoutes.premium);
           return;
         }
@@ -105,12 +110,15 @@ class ChatController extends GetxController {
       // Stream mock AI response
       await _streamMockResponse(text);
     } on PaywallException {
+      debugPrint('[ChatController] PaywallException — navigating to premium');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
       Get.toNamed(AppRoutes.premium);
     } on AppException catch (e) {
+      debugPrint('[ChatController] AppException: ${e.message}');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
       AppSnackbar.error(e.message);
     } catch (e) {
+      debugPrint('[ChatController] Unexpected error: $e');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
       AppSnackbar.error('Something went wrong. Try again.');
     } finally {

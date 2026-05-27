@@ -1,4 +1,5 @@
 // lib/modules/splash/view.dart
+// Fully StatelessWidget — animation driven by controller.opacity (Obx)
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -12,78 +13,50 @@ class SplashView extends GetView<SplashController> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: _SplashContent(),
-    );
-  }
-}
+      body: Center(
+        child: Obx(() => AnimatedOpacity(
+              opacity: controller.opacity.value,
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeIn,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // App wordmark
+                  Text(
+                    'OpenUp',
+                    style: AppTextStyles.displayLarge.copyWith(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: -0.5,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
 
-class _SplashContent extends StatefulWidget {
-  @override
-  State<_SplashContent> createState() => _SplashContentState();
-}
+                  const SizedBox(height: 10),
 
-class _SplashContentState extends State<_SplashContent>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fadeAnimation;
+                  // Tagline
+                  Text(
+                    "Someone's listening.",
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
-    _controller.forward();
-  }
+                  const SizedBox(height: 48),
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // App wordmark
-            Text(
-              'OpenUp',
-              style: AppTextStyles.displayLarge.copyWith(
-                fontSize: 28,
-                fontWeight: FontWeight.w300,
-                letterSpacing: -0.5,
-                color: AppColors.textPrimary,
+                  // Subtle loader
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.2,
+                      color: AppColors.accentPurple.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            // Tagline
-            Text(
-              "Someone's listening.",
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary.withOpacity(0.7),
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 48),
-            // Subtle loading indicator
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: AppColors.accentPurple.withOpacity(0.5),
-              ),
-            ),
-          ],
-        ),
+            )),
       ),
     );
   }

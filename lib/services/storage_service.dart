@@ -1,5 +1,6 @@
 // lib/services/storage_service.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import '../core/constants/app_constants.dart';
@@ -11,20 +12,25 @@ class StorageService extends GetxService {
   @override
   void onInit() {
     super.onInit();
+    debugPrint('[StorageService] Initializing FlutterSecureStorage…');
     _storage = const FlutterSecureStorage(
       aOptions: AndroidOptions(encryptedSharedPreferences: true),
       iOptions: IOSOptions(
         accessibility: KeychainAccessibility.first_unlock,
       ),
     );
+    debugPrint('[StorageService] Ready');
   }
 
   // ─── Generic Read/Write ──────────────────────────────────────────────────────
 
   Future<String?> getString(String key) async {
     try {
-      return await _storage.read(key: key);
+      final value = await _storage.read(key: key);
+      debugPrint('[Storage] READ  "$key" → ${value != null ? '"$value"' : 'null'}');
+      return value;
     } catch (e) {
+      debugPrint('[Storage] ERROR reading "$key": $e');
       throw StorageException('Failed to read $key: $e');
     }
   }
@@ -32,7 +38,9 @@ class StorageService extends GetxService {
   Future<void> setString(String key, String value) async {
     try {
       await _storage.write(key: key, value: value);
+      debugPrint('[Storage] WRITE "$key" = "$value"');
     } catch (e) {
+      debugPrint('[Storage] ERROR writing "$key": $e');
       throw StorageException('Failed to write $key: $e');
     }
   }
@@ -40,7 +48,9 @@ class StorageService extends GetxService {
   Future<void> delete(String key) async {
     try {
       await _storage.delete(key: key);
+      debugPrint('[Storage] DELETE "$key"');
     } catch (e) {
+      debugPrint('[Storage] ERROR deleting "$key": $e');
       throw StorageException('Failed to delete $key: $e');
     }
   }
@@ -48,7 +58,9 @@ class StorageService extends GetxService {
   Future<void> deleteAll() async {
     try {
       await _storage.deleteAll();
+      debugPrint('[Storage] DELETE ALL');
     } catch (e) {
+      debugPrint('[Storage] ERROR clearing all: $e');
       throw StorageException('Failed to clear storage: $e');
     }
   }
@@ -95,12 +107,14 @@ class StorageService extends GetxService {
   Future<String?> getPin() => getString(AppConstants.keyPin);
   Future<void> setPin(String pin) => setString(AppConstants.keyPin, pin);
 
-  /// Clears all user data but preserves the device ID
+  /// Clears all user data but preserves the device ID.
   Future<void> clearUserData() async {
+    debugPrint('[Storage] clearUserData — preserving deviceId');
     final deviceId = await getDeviceId();
     await deleteAll();
     if (deviceId != null) {
       await setDeviceId(deviceId);
     }
+    debugPrint('[Storage] clearUserData done');
   }
 }
