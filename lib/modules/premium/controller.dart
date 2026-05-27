@@ -3,13 +3,11 @@
 import 'package:get/get.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/errors/app_exceptions.dart';
-import '../../repositories/device_repository.dart';
 import '../../repositories/payment_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
 
 class PremiumController extends GetxController {
-  late final DeviceRepository _deviceRepo;
   late final PaymentRepository _paymentRepo;
 
   final selectedPlan = AppConstants.planMonthly.obs;
@@ -42,7 +40,6 @@ class PremiumController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _deviceRepo = Get.find<DeviceRepository>();
     _paymentRepo = Get.find<PaymentRepository>();
   }
 
@@ -53,9 +50,7 @@ class PremiumController extends GetxController {
   Future<void> continueWithPlan() async {
     isLoading.value = true;
     try {
-      final deviceId = await _deviceRepo.getDeviceId();
-      final paymentUrl =
-          await _paymentRepo.initiatePayment(deviceId, selectedPlan.value);
+      final paymentUrl = await _paymentRepo.initiatePayment(selectedPlan.value);
 
       // Navigate to premium register screen with payment URL
       Get.toNamed(

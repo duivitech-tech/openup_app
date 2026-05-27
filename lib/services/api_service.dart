@@ -156,13 +156,14 @@ class ApiService extends GetxService {
 
   // ─── Payment ─────────────────────────────────────────────────────────────────
 
-  /// POST /api/payment/initiate
-  Future<String> initiatePayment(String deviceId, String planType) async {
+  /// POST /api/payment/initiate — Bearer accessToken
+  Future<String> initiatePayment(String accessToken, String planType) async {
     debugPrint('[ApiService] POST ${ApiConstants.paymentInitiate} — planType=$planType');
     try {
       final response = await _dio.post(
         ApiConstants.paymentInitiate,
-        data: {'deviceId': deviceId, 'planType': planType},
+        data: {'planType': planType},
+        options: _bearer(accessToken),
       );
       debugPrint('[ApiService] initiatePayment response: ${response.statusCode}');
       final data = response.data as Map<String, dynamic>;

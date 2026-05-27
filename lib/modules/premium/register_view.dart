@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import '../../themes/app_theme.dart';
-import '../../widgets/primary_button.dart';
 import 'register_controller.dart';
 
 class PremiumRegisterView extends GetView<PremiumRegisterController> {
@@ -23,20 +22,20 @@ class PremiumRegisterView extends GetView<PremiumRegisterController> {
         ),
       ),
       body: Obx(() {
-        if (controller.showWebView.value) {
-          return const _PaymentWebView();
-        }
-        return const _RegistrationForm();
+        if (controller.showWebView.value) return const _PaymentWebView();
+        if (controller.isPolling.value) return const _PollingView();
+        return const SizedBox.shrink();
       }),
     );
   }
 }
 
-/// WebView that opens PhonePe payment URL.
 class _PaymentWebView extends StatelessWidget {
   const _PaymentWebView();
 
   PremiumRegisterController get c => Get.find<PremiumRegisterController>();
+
+  static const _redirectHost = 'openup-backend.vercel.app';
 
   @override
   Widget build(BuildContext context) {
@@ -50,13 +49,10 @@ class _PaymentWebView extends StatelessWidget {
               const Icon(Icons.lock_outline_rounded,
                   size: 14, color: AppColors.success),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Secure payment via PhonePe',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+              Text(
+                'Secure payment via PhonePe',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -72,20 +68,17 @@ class _PaymentWebView extends StatelessWidget {
               thirdPartyCookiesEnabled: true,
             ),
             onLoadStop: (wc, url) {
-              // Detect payment success/failure by URL patterns
               final urlStr = url?.toString() ?? '';
               if (urlStr.contains('success') ||
                   urlStr.contains('redirect') ||
-                  urlStr.contains('openup-backend.vercel.app')) {
-                c.onPaymentComplete();
+                  urlStr.contains(_redirectHost)) {
+                c.onPaymentRedirect();
               } else if (urlStr.contains('fail') ||
                   urlStr.contains('cancel')) {
                 c.onPaymentFailed();
               }
             },
-            onReceivedError: (wc, req, err) {
-              c.onPaymentFailed();
-            },
+            onReceivedError: (wc, req, err) => c.onPaymentFailed(),
           ),
         ),
       ],
@@ -93,194 +86,33 @@ class _PaymentWebView extends StatelessWidget {
   }
 }
 
-/// Registration form after payment is completed.
-class _RegistrationForm extends StatelessWidget {
-  const _RegistrationForm();
-
-  PremiumRegisterController get c => Get.find<PremiumRegisterController>();
+class _PollingView extends StatelessWidget {
+  const _PollingView();
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        child: Form(
-          key: c.formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-
-              // Payment success indicator (if payment was completed)
-              Obx(() {
-                if (!c.paymentCompleted.value) {
-                  return const SizedBox.shrink();
-                }
-                return Container(
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    color: AppColors.successDim.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppColors.success.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle_outline_rounded,
-                          color: AppColors.success, size: 18),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Payment successful!',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.success,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-
-              Text(
-                'Set up your\nPlus access',
-                style: AppTextStyles.displayLarge.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w400,
-                  height: 1.2,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
-                'Your account is tied to this device and PIN only.',
-                style: AppTextStyles.bodySmall,
-              ),
-
-              const SizedBox(height: 32),
-
-              // Plan display pill
-              Obx(() => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: AppColors.border, width: 0.5),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.all_inclusive_rounded,
-                          size: 14,
-                          color: AppColors.accentPurple,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _planLabel(c.planType.value),
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.accentPurple,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-
-              const SizedBox(height: 28),
-
-              // Nickname field
-              Text(
-                'Nickname',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: c.nicknameController,
-                validator: c.validateNickname,
-                textInputAction: TextInputAction.next,
-                style: AppTextStyles.bodyMedium,
-                maxLength: 16,
-                decoration: const InputDecoration(
-                  hintText: 'choose a nickname',
-                  counterText: '',
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // PIN field
-              Text(
-                '4-digit PIN',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Obx(() => TextFormField(
-                    controller: c.pinController,
-                    validator: c.validatePin,
-                    obscureText: !c.pinVisible.value,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    maxLength: 4,
-                    style: AppTextStyles.bodyMedium,
-                    decoration: InputDecoration(
-                      hintText: '• • • •',
-                      counterText: '',
-                      suffixIcon: GestureDetector(
-                        onTap: c.togglePinVisibility,
-                        child: Icon(
-                          c.pinVisible.value
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          size: 18,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  )),
-
-              const SizedBox(height: 36),
-
-              // CTA
-              Obx(() => PrimaryButton(
-                    label: 'Activate my access',
-                    onPressed: c.activateAccess,
-                    isLoading: c.isLoading.value,
-                  )),
-
-              const SizedBox(height: 16),
-
-              Center(
-                child: Text(
-                  'Your PIN is the only way to access your account.',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary.withValues(alpha: 0.6),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(
+            color: AppColors.accentPurple,
+            strokeWidth: 2,
           ),
-        ),
+          const SizedBox(height: 20),
+          Text(
+            'Confirming your payment…',
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This usually takes a few seconds.',
+            style: AppTextStyles.bodySmall
+                .copyWith(color: AppColors.textSecondary.withValues(alpha: 0.6)),
+          ),
+        ],
       ),
     );
-  }
-
-  String _planLabel(String planType) {
-    return switch (planType) {
-      'daily' => 'Daily Plan · ₹19',
-      'weekly' => 'Weekly Plan · ₹49',
-      'monthly' => 'Monthly Plan · ₹199',
-      _ => 'Plus Plan',
-    };
   }
 }

@@ -20,13 +20,15 @@ class PaymentRepository extends GetxService {
 
   /// Initiates a PhonePe payment session for the selected plan.
   /// Returns the payment URL to open in a WebView.
-  Future<String> initiatePayment(String deviceId, String planType) async {
-    debugPrint('[PaymentRepository] initiatePayment: deviceId=$deviceId, planType=$planType');
+  Future<String> initiatePayment(String planType) async {
+    debugPrint('[PaymentRepository] initiatePayment: planType=$planType');
     try {
-      await _storage.setPlanType(planType);
-      debugPrint('[PaymentRepository] Saved planType=$planType to storage');
+      final accessToken = await _storage.getAuthToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        throw const UnauthorizedException('You must be logged in to make a payment.');
+      }
 
-      final paymentUrl = await _apiService.initiatePayment(deviceId, planType);
+      final paymentUrl = await _apiService.initiatePayment(accessToken, planType);
       debugPrint('[PaymentRepository] Got paymentUrl: $paymentUrl');
       return paymentUrl;
     } on AppException catch (e) {
@@ -38,10 +40,26 @@ class PaymentRepository extends GetxService {
     }
   }
 
-  /// Retrieves the last selected plan type from storage.
-  Future<String?> getSelectedPlan() async {
-    final plan = await _storage.getPlanType();
-    debugPrint('[PaymentRepository] getSelectedPlan: $plan');
-    return plan;
+  /// Polls GET /api/user/profile up to [maxAttempts] times (3s apart).
+  /// Returns true when isPremium is confirmed, false on timeout.
+  Future<bool> pollForPremium({int maxAttempts = 10}) async {
+    debugPrint('[PaymentRepository] pollForPremium started');
+    final accessToken = await _storage.getAuthToken();
+    if (accessToken == null || accessToken.isEmpty) return false;
+
+    for (int i = 0; i < maxAttempts; i++) {
+      await Future.delayed(const Duration(seconds: 3));
+      try {
+        final user = await _apiService.fetchProfile(accessToken);
+        debugPrint('[PaymentRepository] poll #${i + 1}: isPremium=${user.isPremium}');
+        if (user.isPremium) {
+          return true;
+        }
+      } catch (e) {
+        debugPrint('[PaymentRepository] poll #${i + 1} error: $e');
+      }
+    }
+    debugPrint('[PaymentRepository] pollForPremium timed out');
+    return false;
   }
 }
