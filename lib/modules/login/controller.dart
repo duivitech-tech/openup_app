@@ -1,5 +1,5 @@
-// lib/modules/identity/controller.dart
-// Signup screen — calls /api/auth/signup, stores token, navigates to Home
+// lib/modules/login/controller.dart
+// Login screen — calls /api/auth/login, stores token, navigates to Home
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -10,7 +10,7 @@ import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
 
-class IdentityController extends GetxController {
+class LoginController extends GetxController {
   late final UserRepository _userRepo;
   late final DeviceRepository _deviceRepo;
 
@@ -23,15 +23,10 @@ class IdentityController extends GetxController {
   final pinVisible = false.obs;
   final isLoading = false.obs;
 
-  String get previewId {
-    final a = alias.value.isNotEmpty ? alias.value : 'alias';
-    return '$a · ${pin.value.isNotEmpty ? '••••' : 'XXXX'}';
-  }
-
   @override
   void onInit() {
     super.onInit();
-    debugPrint('[IdentityController] onInit');
+    debugPrint('[LoginController] onInit');
     _userRepo = Get.find<UserRepository>();
     _deviceRepo = Get.find<DeviceRepository>();
     aliasController.addListener(() => alias.value = aliasController.text);
@@ -46,38 +41,41 @@ class IdentityController extends GetxController {
   }
 
   void togglePinVisibility() => pinVisible.toggle();
-  String? validateAlias(String? value) => Validators.validateAlias(value);
-  String? validatePin(String? value) => Validators.validatePin(value);
+  String? validateAlias(String? v) => Validators.validateAlias(v);
+  String? validatePin(String? v) => Validators.validatePin(v);
 
-  void goToLogin() => Get.offAllNamed(AppRoutes.login);
+  void goToSignup() => Get.offAllNamed(AppRoutes.identity);
 
-  Future<void> enterOpenUp() async {
-    debugPrint('[IdentityController] enterOpenUp (signup) called');
+  Future<void> login() async {
+    debugPrint('[LoginController] login called');
     if (!formKey.currentState!.validate()) return;
 
     isLoading.value = true;
     try {
       final deviceId = await _deviceRepo.getDeviceId();
-      debugPrint('[IdentityController] deviceId=$deviceId — calling signup API');
+      debugPrint('[LoginController] deviceId=$deviceId — calling login API');
 
-      await _userRepo.signup(
+      await _userRepo.login(
         deviceId: deviceId,
         alias: aliasController.text.trim(),
         pin: pinController.text,
       );
 
-      debugPrint('[IdentityController] Signup success — navigating to Home');
+      debugPrint('[LoginController] Login success — navigating to Home');
       _deviceRepo.initDevice().ignore();
       Get.offAllNamed(AppRoutes.home);
-    } on AlreadyRegisteredException {
-      debugPrint('[IdentityController] AlreadyRegisteredException — prompt login');
-      AppSnackbar.error('This alias is taken. Try another or log in.');
+    } on InvalidCredentialsException catch (e) {
+      debugPrint('[LoginController] InvalidCredentials: ${e.message}');
+      AppSnackbar.error(e.message);
+    } on UserNotFoundException catch (e) {
+      debugPrint('[LoginController] UserNotFound: ${e.message}');
+      AppSnackbar.error(e.message);
     } on AppException catch (e) {
-      debugPrint('[IdentityController] AppException: ${e.message}');
+      debugPrint('[LoginController] AppException: ${e.message}');
       AppSnackbar.error(e.message);
     } catch (e) {
-      debugPrint('[IdentityController] Unexpected error: $e');
-      AppSnackbar.error('Signup failed. Please try again.');
+      debugPrint('[LoginController] Unexpected error: $e');
+      AppSnackbar.error('Login failed. Please try again.');
     } finally {
       isLoading.value = false;
     }

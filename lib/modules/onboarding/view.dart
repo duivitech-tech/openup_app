@@ -70,7 +70,7 @@ class OnboardingView extends GetView<OnboardingController> {
               child: Obx(() => GhostButton(
                     label: controller.isLastPage ? 'Get started' : 'Continue',
                     onPressed: controller.nextPage,
-                    borderColor: AppColors.accentPurple.withOpacity(0.6),
+                    borderColor: AppColors.accentPurple.withValues(alpha: 0.6),
                     textColor: AppColors.accentPurple,
                   )),
             ),
@@ -106,10 +106,10 @@ class _OnboardingSlide extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.accentPurple.withOpacity(0.1),
+              color: AppColors.accentPurple.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.accentPurple.withOpacity(0.25),
+                color: AppColors.accentPurple.withValues(alpha: 0.25),
                 width: 1,
               ),
             ),

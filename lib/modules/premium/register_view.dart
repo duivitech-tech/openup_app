@@ -121,10 +121,10 @@ class _RegistrationForm extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: AppColors.successDim.withOpacity(0.2),
+                    color: AppColors.successDim.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: AppColors.success.withOpacity(0.3),
+                      color: AppColors.success.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -263,7 +263,7 @@ class _RegistrationForm extends StatelessWidget {
                 child: Text(
                   'Your PIN is the only way to access your account.',
                   style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary.withOpacity(0.6),
+                    color: AppColors.textSecondary.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),

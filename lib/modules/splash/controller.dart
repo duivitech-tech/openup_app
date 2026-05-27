@@ -1,4 +1,9 @@
 // lib/modules/splash/controller.dart
+// Navigation logic:
+// 1. No deviceId → Onboarding
+// 2. Has deviceId + auth token → Home (returning user)
+// 3. Has deviceId + alias but no token → Login (had local account, needs to re-authenticate)
+// 4. Has deviceId but no alias → Identity (new user)
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -10,98 +15,87 @@ class SplashController extends GetxController {
   late final StorageService _storage;
   late final DeviceRepository _deviceRepo;
 
-  // Drives the fade-in animation in the view (0.0 → 1.0)
   final opacity = 0.0.obs;
 
   @override
   void onInit() {
     super.onInit();
-    debugPrint('[Splash] onInit — finding services');
+    debugPrint('[SplashController] onInit');
     _storage = Get.find<StorageService>();
     _deviceRepo = Get.find<DeviceRepository>();
-    _initialize();
+    _startSequence();
   }
 
-  Future<void> _initialize() async {
-    debugPrint('[Splash] Starting initialization…');
-
-    // Trigger fade-in
+  Future<void> _startSequence() async {
+    // Fade in logo
     await Future.delayed(const Duration(milliseconds: 100));
     opacity.value = 1.0;
 
-    // Minimum display time
-    await Future.delayed(const Duration(milliseconds: 1600));
-
-    debugPrint('[Splash] Minimum display time done. Reading storage…');
-
-    try {
-      // ── Step 1: Check if device ID exists ─────────────────────────────────
-      String? deviceId;
-      try {
-        deviceId = await _storage.getDeviceId();
-        debugPrint('[Splash] deviceId from storage: $deviceId');
-      } catch (e) {
-        debugPrint('[Splash] ERROR reading deviceId: $e');
-        deviceId = null;
-      }
-
-      if (deviceId == null || deviceId.isEmpty) {
-        debugPrint('[Splash] No deviceId → navigating to Onboarding');
-        Get.offAllNamed(AppRoutes.onboarding);
-        return;
-      }
-
-      // ── Step 2: Try to sync with backend (non-blocking on failure) ─────────
-      debugPrint('[Splash] deviceId=$deviceId — calling initDevice…');
-      try {
-        final device = await _deviceRepo.initDevice();
-        debugPrint(
-            '[Splash] initDevice success → messagesLeft=${device.messagesLeft}, isPremium=${device.isPremium}');
-      } catch (e) {
-        debugPrint('[Splash] initDevice failed (will use cache): $e');
-        // Not fatal — continue with cached data
-      }
-
-      // ── Step 3: Check identity ─────────────────────────────────────────────
-      String? alias;
-      try {
-        alias = await _storage.getNickname();
-        debugPrint('[Splash] alias from storage: $alias');
-      } catch (e) {
-        debugPrint('[Splash] ERROR reading alias: $e');
-        alias = null;
-      }
-
-      if (alias == null || alias.isEmpty) {
-        debugPrint('[Splash] No alias → navigating to Identity setup');
-        Get.offAllNamed(AppRoutes.identity);
-        return;
-      }
-
-      // ── Step 4: All good — go home ─────────────────────────────────────────
-      debugPrint('[Splash] All checks passed → navigating to Home');
-      Get.offAllNamed(AppRoutes.home);
-    } catch (e, stack) {
-      debugPrint('[Splash] UNEXPECTED ERROR: $e\n$stack');
-      // Safe fallback — always navigate somewhere
-      _safeNavigate();
-    }
+    // Wait for minimum splash duration and routing decision in parallel
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 1800)),
+      _determineRoute(),
+    ]);
   }
 
-  Future<void> _safeNavigate() async {
-    debugPrint('[Splash] Safe fallback navigation…');
+  Future<void> _determineRoute() async {
+    debugPrint('[SplashController] _determineRoute started');
+
+    // ── Step 1: Check device ID ───────────────────────────────────────────────
+    String? deviceId;
     try {
-      final alias = await _storage.getNickname();
-      if (alias != null && alias.isNotEmpty) {
-        debugPrint('[Splash] fallback → Home (alias exists)');
-        Get.offAllNamed(AppRoutes.home);
-      } else {
-        debugPrint('[Splash] fallback → Onboarding');
-        Get.offAllNamed(AppRoutes.onboarding);
-      }
-    } catch (_) {
-      debugPrint('[Splash] fallback → Onboarding (storage error)');
+      deviceId = await _storage.getString('device_id');
+      debugPrint('[SplashController] deviceId=$deviceId');
+    } catch (e) {
+      debugPrint('[SplashController] deviceId read error: $e — going Onboarding');
       Get.offAllNamed(AppRoutes.onboarding);
+      return;
     }
+
+    if (deviceId == null || deviceId.isEmpty) {
+      debugPrint('[SplashController] No deviceId — going Onboarding');
+      Get.offAllNamed(AppRoutes.onboarding);
+      return;
+    }
+
+    // ── Step 2: Check auth token ──────────────────────────────────────────────
+    String? token;
+    try {
+      token = await _storage.getAuthToken();
+      debugPrint('[SplashController] token=${token != null ? "${token.substring(0, 8)}…" : "null"}');
+    } catch (e) {
+      debugPrint('[SplashController] token read error: $e');
+    }
+
+    if (token != null && token.isNotEmpty) {
+      // Has valid token — returning authenticated user → Home
+      debugPrint('[SplashController] Token found — going Home');
+
+      // Kick off device sync in background (non-blocking)
+      _deviceRepo.initDevice().ignore();
+
+      Get.offAllNamed(AppRoutes.home);
+      return;
+    }
+
+    // ── Step 3: No token — check if alias exists (had account, needs login) ──
+    String? alias;
+    try {
+      alias = await _storage.getNickname();
+      debugPrint('[SplashController] alias=$alias');
+    } catch (e) {
+      debugPrint('[SplashController] alias read error: $e');
+    }
+
+    if (alias != null && alias.isNotEmpty) {
+      // Had an account locally but no token → send to Login
+      debugPrint('[SplashController] Alias exists but no token — going Login');
+      Get.offAllNamed(AppRoutes.login);
+      return;
+    }
+
+    // ── Step 4: No alias — brand new user → Identity (signup) ────────────────
+    debugPrint('[SplashController] No alias — going Identity (signup)');
+    Get.offAllNamed(AppRoutes.identity);
   }
 }

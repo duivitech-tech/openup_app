@@ -72,7 +72,7 @@ class PrivateIDCard extends StatelessWidget {
             Text(
               helperText!,
               style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary.withOpacity(0.7),
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
               ),
             ),
           ],

@@ -29,7 +29,7 @@ class DotPageIndicator extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive
                 ? AppColors.accentPurple
-                : AppColors.textSecondary.withOpacity(0.3),
+                : AppColors.textSecondary.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(3),
           ),
         );

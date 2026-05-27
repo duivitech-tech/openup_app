@@ -27,7 +27,7 @@ class HomeDashCard extends StatelessWidget {
         border: Border.all(color: AppColors.border, width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -81,10 +81,10 @@ class HomeDashCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.accentPurple.withOpacity(0.12),
+              color: AppColors.accentPurple.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: AppColors.accentPurple.withOpacity(0.3),
+                color: AppColors.accentPurple.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),

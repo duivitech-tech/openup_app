@@ -5,12 +5,10 @@ import 'package:get/get.dart';
 import '../../models/user_model.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
-import '../../services/storage_service.dart';
 import '../../widgets/app_snackbar.dart';
 
 class ProfileController extends GetxController {
   late final UserRepository _userRepo;
-  late final StorageService _storage;
 
   final user = Rxn<UserModel>();
   final isLoading = false.obs;
@@ -18,28 +16,28 @@ class ProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    debugPrint('[ProfileController] onInit');
     _userRepo = Get.find<UserRepository>();
-    _storage = Get.find<StorageService>();
     _loadUser();
   }
 
   Future<void> _loadUser() async {
+    debugPrint('[ProfileController] _loadUser called');
     isLoading.value = true;
     try {
-      final loaded = await _userRepo.loadUserFromStorage();
+      // Try fresh profile from API first, falls back to storage inside repo
+      final loaded = await _userRepo.fetchProfile();
       user.value = loaded;
-    } catch (_) {
-      // Fallback to basic alias display
-      final alias = await _storage.getNickname();
-      user.value = UserModel(alias: alias ?? 'unknown');
+      debugPrint('[ProfileController] Loaded user: ${user.value}');
+    } catch (e) {
+      debugPrint('[ProfileController] _loadUser error: $e');
+      user.value = UserModel(alias: 'unknown');
     } finally {
       isLoading.value = false;
     }
   }
 
-  void goToSubscription() {
-    Get.toNamed(AppRoutes.premium);
-  }
+  void goToSubscription() => Get.toNamed(AppRoutes.premium);
 
   void showPrivacyPolicy() {
     Get.snackbar(
@@ -85,11 +83,9 @@ class ProfileController extends GetxController {
                       color: Color(0xFFF0EEF4))),
               const SizedBox(height: 8),
               const Text(
-                "Version 1.0.0\n\nOpenUp is a private, session-based AI conversation platform.\nNo data is collected, stored, or shared.",
+                'Version 1.0.0\n\nOpenUp is a private, session-based AI conversation platform.\nNo data is collected, stored, or shared.',
                 style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF8A8A9A),
-                    height: 1.6),
+                    fontSize: 14, color: Color(0xFF8A8A9A), height: 1.6),
               ),
               const SizedBox(height: 24),
             ],
@@ -99,6 +95,7 @@ class ProfileController extends GetxController {
     );
   }
 
+  /// Clears all data and logs out — hits logout API then goes to onboarding.
   Future<void> clearLocalData() async {
     Get.dialog(
       AlertDialog(
@@ -107,7 +104,7 @@ class ProfileController extends GetxController {
         title: const Text('Clear all data?',
             style: TextStyle(color: Color(0xFFF0EEF4), fontSize: 17)),
         content: const Text(
-          'This will remove your alias, PIN, and all local data. You will start fresh.',
+          'This will log you out and remove all local data. You will start fresh.',
           style: TextStyle(color: Color(0xFF8A8A9A), fontSize: 14),
         ),
         actions: [
@@ -119,10 +116,7 @@ class ProfileController extends GetxController {
           TextButton(
             onPressed: () async {
               Get.back();
-              await _userRepo.clearAllData();
-              AppSnackbar.success('All data cleared.');
-              await Future.delayed(const Duration(milliseconds: 600));
-              Get.offAllNamed(AppRoutes.onboarding);
+              await _performLogout();
             },
             child: const Text('Clear',
                 style: TextStyle(color: Color(0xFFC0392B))),
@@ -132,6 +126,7 @@ class ProfileController extends GetxController {
     );
   }
 
+  /// Removes identity — same as clearLocalData but different copy.
   Future<void> removeIdentity() async {
     Get.dialog(
       AlertDialog(
@@ -152,8 +147,7 @@ class ProfileController extends GetxController {
           TextButton(
             onPressed: () async {
               Get.back();
-              await _userRepo.clearAllData();
-              Get.offAllNamed(AppRoutes.onboarding);
+              await _performLogout();
             },
             child: const Text('Remove',
                 style: TextStyle(color: Color(0xFFC0392B))),
@@ -163,7 +157,24 @@ class ProfileController extends GetxController {
     );
   }
 
+  /// Calls logout API, clears storage, navigates to onboarding.
+  Future<void> _performLogout() async {
+    debugPrint('[ProfileController] _performLogout called');
+    try {
+      await _userRepo.logout();
+      debugPrint('[ProfileController] Logout complete — navigating to onboarding');
+      AppSnackbar.success('Logged out successfully.');
+      await Future.delayed(const Duration(milliseconds: 400));
+      Get.offAllNamed(AppRoutes.onboarding);
+    } catch (e) {
+      debugPrint('[ProfileController] Logout error: $e');
+      // Even on error, clear locally and redirect
+      Get.offAllNamed(AppRoutes.onboarding);
+    }
+  }
+
   void endSession() {
-    Get.offAllNamed(AppRoutes.home);
+    debugPrint('[ProfileController] endSession → home');
+    Get.back();
   }
 }

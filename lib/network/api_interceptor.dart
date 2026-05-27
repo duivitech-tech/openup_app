@@ -1,7 +1,6 @@
 // lib/network/api_interceptor.dart
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Response;
 import '../core/errors/app_exceptions.dart';

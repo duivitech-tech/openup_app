@@ -58,7 +58,7 @@ class ChatInputBar extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: hint,
                   hintStyle: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary.withOpacity(0.5),
+                    color: AppColors.textSecondary.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -76,20 +76,20 @@ class ChatInputBar extends StatelessWidget {
           const SizedBox(width: 8),
 
           // Mic (disabled in MVP)
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border, width: 0.5),
-            ),
-            child: Icon(
-              Icons.mic_none_rounded,
-              size: 18,
-              color: AppColors.textSecondary.withOpacity(0.4),
-            ),
-          ),
+          // Container(
+          //   width: 40,
+          //   height: 40,
+          //   decoration: BoxDecoration(
+          //     color: AppColors.surface,
+          //     shape: BoxShape.circle,
+          //     border: Border.all(color: AppColors.border, width: 0.5),
+          //   ),
+          //   child: Icon(
+          //     Icons.mic_none_rounded,
+          //     size: 18,
+          //     color: AppColors.textSecondary.withValues(alpha: 0.4),
+          //   ),
+          // ),
 
           const SizedBox(width: 6),
 
@@ -113,7 +113,7 @@ class ChatInputBar extends StatelessWidget {
                 boxShadow: isEnabled
                     ? [
                         BoxShadow(
-                          color: AppColors.accentPurple.withOpacity(0.3),
+                          color: AppColors.accentPurple.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         )
@@ -125,7 +125,7 @@ class ChatInputBar extends StatelessWidget {
                 size: 18,
                 color: isEnabled
                     ? AppColors.onAccent
-                    : AppColors.textSecondary.withOpacity(0.4),
+                    : AppColors.textSecondary.withValues(alpha: 0.4),
               ),
             ),
           ),

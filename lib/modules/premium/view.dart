@@ -130,7 +130,7 @@ class PremiumView extends GetView<PremiumController> {
                     child: Text(
                       'Cancel anytime · Secure payment via PhonePe',
                       style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary.withOpacity(0.6),
+                        color: AppColors.textSecondary.withValues(alpha: 0.6),
                       ),
                     ),
                   ),

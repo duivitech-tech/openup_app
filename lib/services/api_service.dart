@@ -21,7 +21,105 @@ class ApiService extends GetxService {
 
   Dio get _dio => _dioClient.dio;
 
-  // ─── Device ──────────────────────────────────────────────────────────────────
+  // ─── Auth helpers ─────────────────────────────────────────────────────────────
+
+  /// Returns options with Bearer token if provided.
+  Options _authOptions(String? token) {
+    if (token == null || token.isEmpty) return Options();
+    return Options(headers: {'Authorization': 'Bearer $token'});
+  }
+
+  // ─── Auth endpoints ───────────────────────────────────────────────────────────
+
+  /// POST /api/auth/signup
+  /// Body: { deviceId, alias, pin }
+  /// Returns: { success, token, user: { alias, ... } }
+  Future<AuthResponse> signup({
+    required String deviceId,
+    required String alias,
+    required String pin,
+  }) async {
+    debugPrint('[ApiService] POST ${ApiConstants.authSignup} — alias=$alias');
+    try {
+      final response = await _dio.post(
+        ApiConstants.authSignup,
+        data: {'deviceId': deviceId, 'alias': alias, 'pin': pin},
+      );
+      debugPrint('[ApiService] signup response: ${response.statusCode} ${response.data}');
+      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      debugPrint('[ApiService] signup DioException: ${e.response?.statusCode} ${e.response?.data}');
+      if (e.response?.statusCode == 409) {
+        throw const AlreadyRegisteredException();
+      }
+      throw _toDomainError(e);
+    }
+  }
+
+  /// POST /api/auth/login
+  /// Body: { deviceId, alias, pin }
+  /// Returns: { success, token, user: { alias, ... } }
+  Future<AuthResponse> login({
+    required String deviceId,
+    required String alias,
+    required String pin,
+  }) async {
+    debugPrint('[ApiService] POST ${ApiConstants.authLogin} — alias=$alias');
+    try {
+      final response = await _dio.post(
+        ApiConstants.authLogin,
+        data: {'deviceId': deviceId, 'alias': alias, 'pin': pin},
+      );
+      debugPrint('[ApiService] login response: ${response.statusCode} ${response.data}');
+      return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      debugPrint('[ApiService] login DioException: ${e.response?.statusCode} ${e.response?.data}');
+      if (e.response?.statusCode == 401) {
+        throw const InvalidCredentialsException();
+      }
+      if (e.response?.statusCode == 404) {
+        throw const UserNotFoundException();
+      }
+      throw _toDomainError(e);
+    }
+  }
+
+  /// GET /api/auth/profile (requires Bearer token)
+  /// Returns: { alias, isPremium, messagesLeft, planType, expiryDate, ... }
+  Future<UserModel> fetchProfile(String token) async {
+    debugPrint('[ApiService] GET ${ApiConstants.authProfile}');
+    try {
+      final response = await _dio.get(
+        ApiConstants.authProfile,
+        options: _authOptions(token),
+      );
+      debugPrint('[ApiService] fetchProfile response: ${response.statusCode} ${response.data}');
+      return UserModel.fromProfileJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      debugPrint('[ApiService] fetchProfile DioException: ${e.response?.statusCode}');
+      if (e.response?.statusCode == 401) {
+        throw const SessionExpiredException();
+      }
+      throw _toDomainError(e);
+    }
+  }
+
+  /// POST /api/auth/logout (requires Bearer token)
+  Future<void> logout(String token) async {
+    debugPrint('[ApiService] POST ${ApiConstants.authLogout}');
+    try {
+      final response = await _dio.post(
+        ApiConstants.authLogout,
+        options: _authOptions(token),
+      );
+      debugPrint('[ApiService] logout response: ${response.statusCode}');
+    } on DioException catch (e) {
+      debugPrint('[ApiService] logout DioException: ${e.response?.statusCode} — ignoring');
+      // Logout errors are non-fatal — always clear local token
+    }
+  }
+
+  // ─── Device ───────────────────────────────────────────────────────────────────
 
   /// POST /api/device/init
   Future<DeviceModel> initDevice(String deviceId) async {
@@ -34,7 +132,7 @@ class ApiService extends GetxService {
       debugPrint('[ApiService] initDevice response: ${response.statusCode} ${response.data}');
       return DeviceModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      debugPrint('[ApiService] initDevice DioException: ${e.response?.statusCode} ${e.message}');
+      debugPrint('[ApiService] initDevice DioException: ${e.response?.statusCode}');
       throw _toDomainError(e);
     }
   }
@@ -50,9 +148,8 @@ class ApiService extends GetxService {
       debugPrint('[ApiService] deductMessage response: ${response.statusCode} ${response.data}');
       return DeductResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      debugPrint('[ApiService] deductMessage DioException: ${e.response?.statusCode} ${e.message}');
+      debugPrint('[ApiService] deductMessage DioException: ${e.response?.statusCode}');
       if (e.response?.statusCode == 403) {
-        debugPrint('[ApiService] deductMessage → PaywallException (403)');
         throw const PaywallException();
       }
       throw _toDomainError(e);
@@ -63,29 +160,27 @@ class ApiService extends GetxService {
 
   /// POST /api/payment/initiate
   Future<String> initiatePayment(String deviceId, String planType) async {
-    debugPrint('[ApiService] POST ${ApiConstants.paymentInitiate} — deviceId=$deviceId, planType=$planType');
+    debugPrint('[ApiService] POST ${ApiConstants.paymentInitiate} — planType=$planType');
     try {
       final response = await _dio.post(
         ApiConstants.paymentInitiate,
         data: {'deviceId': deviceId, 'planType': planType},
       );
-      debugPrint('[ApiService] initiatePayment response: ${response.statusCode} ${response.data}');
+      debugPrint('[ApiService] initiatePayment response: ${response.statusCode}');
       final data = response.data as Map<String, dynamic>;
-      final success = data['success'] as bool? ?? false;
-      if (!success) {
-        debugPrint('[ApiService] initiatePayment: success=false');
+      if (!(data['success'] as bool? ?? false)) {
         throw const ServerException('Payment initiation failed');
       }
       final url = data['paymentUrl'] as String;
-      debugPrint('[ApiService] initiatePayment: paymentUrl=$url');
+      debugPrint('[ApiService] paymentUrl=$url');
       return url;
     } on DioException catch (e) {
-      debugPrint('[ApiService] initiatePayment DioException: ${e.response?.statusCode} ${e.message}');
+      debugPrint('[ApiService] initiatePayment DioException: ${e.response?.statusCode}');
       throw _toDomainError(e);
     }
   }
 
-  // ─── User ────────────────────────────────────────────────────────────────────
+  // ─── User ─────────────────────────────────────────────────────────────────────
 
   /// POST /api/user/register-premium
   Future<RegisterPremiumResponse> registerPremium({
@@ -94,35 +189,25 @@ class ApiService extends GetxService {
     required String password,
     required String planType,
   }) async {
-    debugPrint('[ApiService] POST ${ApiConstants.registerPremium} — deviceId=$deviceId, name=$name, planType=$planType');
+    debugPrint('[ApiService] POST ${ApiConstants.registerPremium}');
     try {
       final response = await _dio.post(
         ApiConstants.registerPremium,
-        data: {
-          'deviceId': deviceId,
-          'name': name,
-          'password': password,
-          'planType': planType,
-        },
+        data: {'deviceId': deviceId, 'name': name, 'password': password, 'planType': planType},
       );
-      debugPrint('[ApiService] registerPremium response: ${response.statusCode} ${response.data}');
-      return RegisterPremiumResponse.fromJson(
-          response.data as Map<String, dynamic>);
+      debugPrint('[ApiService] registerPremium response: ${response.statusCode}');
+      return RegisterPremiumResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      debugPrint('[ApiService] registerPremium DioException: ${e.response?.statusCode} ${e.response?.data} ${e.message}');
+      debugPrint('[ApiService] registerPremium DioException: ${e.response?.statusCode} ${e.response?.data}');
       if (e.response?.statusCode == 400) {
         final data = e.response?.data as Map<String, dynamic>?;
         final err = data?['error'] as String?;
         if (err != null && err.contains('already registered')) {
-          debugPrint('[ApiService] registerPremium → AlreadyRegisteredException');
           throw const AlreadyRegisteredException();
         }
         throw ServerException(err ?? 'Registration failed', statusCode: 400);
       }
-      if (e.response?.statusCode == 402) {
-        debugPrint('[ApiService] registerPremium → NoPaymentException (402)');
-        throw const NoPaymentException();
-      }
+      if (e.response?.statusCode == 402) throw const NoPaymentException();
       throw _toDomainError(e);
     }
   }
@@ -135,33 +220,26 @@ class ApiService extends GetxService {
         ApiConstants.checkName,
         queryParameters: {'name': name},
       );
-      final data = response.data as Map<String, dynamic>;
-      final available = data['available'] as bool? ?? false;
-      debugPrint('[ApiService] checkName response: available=$available');
+      final available = (response.data as Map<String, dynamic>)['available'] as bool? ?? false;
+      debugPrint('[ApiService] checkName: available=$available');
       return available;
     } on DioException catch (e) {
-      debugPrint('[ApiService] checkName DioException: ${e.response?.statusCode} ${e.message}');
+      debugPrint('[ApiService] checkName DioException: ${e.response?.statusCode}');
       throw _toDomainError(e);
     }
   }
 
-  // ─── Error Mapping ───────────────────────────────────────────────────────────
+  // ─── Error Mapping ────────────────────────────────────────────────────────────
 
   AppException _toDomainError(DioException e) {
-    if (e.error is AppException) {
-      debugPrint('[ApiService] Re-wrapping AppException from error field');
-      return e.error as AppException;
-    }
+    if (e.error is AppException) return e.error as AppException;
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
-      debugPrint('[ApiService] → NetworkException (timeout)');
       return const NetworkException('Connection timed out');
     }
     if (e.type == DioExceptionType.connectionError) {
-      debugPrint('[ApiService] → NetworkException (no connection)');
       return const NetworkException('No internet connection');
     }
-    debugPrint('[ApiService] → ServerException: ${e.response?.statusCode}');
     return ServerException(
       e.response?.data?.toString() ?? e.message ?? 'Unknown error',
       statusCode: e.response?.statusCode,

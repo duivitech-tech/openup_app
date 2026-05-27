@@ -80,7 +80,7 @@ class DestructiveRow extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.destructive.withOpacity(0.85),
+                  color: AppColors.destructive.withValues(alpha: 0.85),
                 ),
               ),
             ),

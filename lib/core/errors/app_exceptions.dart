@@ -28,13 +28,9 @@ class ServerException extends AppException {
 }
 
 /// Thrown when the backend returns 403 (message limit exhausted).
-/// Triggers the premium paywall navigation.
 class PaywallException extends AppException {
   const PaywallException()
       : super('Daily message limit reached.', statusCode: 403);
-
-  @override
-  String toString() => 'PaywallException: Daily message limit reached.';
 }
 
 /// Thrown when the device has already registered a premium account (400).
@@ -57,7 +53,25 @@ class StorageException extends AppException {
   String toString() => 'StorageException: $message';
 }
 
-/// Thrown on invalid credentials (401).
+/// Thrown on wrong alias or PIN (401).
+class InvalidCredentialsException extends AppException {
+  const InvalidCredentialsException()
+      : super('Incorrect alias or PIN. Please try again.', statusCode: 401);
+}
+
+/// Thrown when alias not found on login (404).
+class UserNotFoundException extends AppException {
+  const UserNotFoundException()
+      : super('No account found with this alias.', statusCode: 404);
+}
+
+/// Thrown when auth token is expired or invalid (401 on profile/logout).
+class SessionExpiredException extends AppException {
+  const SessionExpiredException()
+      : super('Your session has expired. Please log in again.', statusCode: 401);
+}
+
+/// Thrown on invalid credentials (401) — generic.
 class UnauthorizedException extends AppException {
   const UnauthorizedException(super.message) : super(statusCode: 401);
 }

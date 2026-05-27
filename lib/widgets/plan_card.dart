@@ -33,7 +33,7 @@ class PlanCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.accentPurple.withOpacity(0.12)
+              ? AppColors.accentPurple.withValues(alpha: 0.12)
               : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -54,7 +54,7 @@ class PlanCard extends StatelessWidget {
                 border: Border.all(
                   color: isSelected
                       ? AppColors.accentPurple
-                      : AppColors.textSecondary.withOpacity(0.5),
+                      : AppColors.textSecondary.withValues(alpha: 0.5),
                   width: 1.5,
                 ),
               ),

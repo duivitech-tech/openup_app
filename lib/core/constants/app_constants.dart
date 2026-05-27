@@ -12,6 +12,7 @@ class AppConstants {
   static const String keyPlanType = 'plan_type';
   static const String keyExpiryDate = 'expiry_date';
   static const String keyPin = 'pin';
+  static const String keyAuthToken = 'auth_token';
 
   // ─── Spacing ─────────────────────────────────────────────────────────────────
   static const double spaceXS = 8.0;

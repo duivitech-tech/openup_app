@@ -6,6 +6,7 @@ class UserModel {
   final bool isPremium;
   final String? planType;
   final String? expiryDate;
+  final int? messagesLeft;
 
   const UserModel({
     required this.alias,
@@ -13,6 +14,7 @@ class UserModel {
     this.isPremium = false,
     this.planType,
     this.expiryDate,
+    this.messagesLeft,
   });
 
   factory UserModel.fromStorage({
@@ -31,12 +33,29 @@ class UserModel {
     );
   }
 
+  /// Parse from GET /api/auth/profile response.
+  factory UserModel.fromProfileJson(Map<String, dynamic> json) {
+    // Support both flat and nested { user: {...} } structures
+    final data = json.containsKey('user')
+        ? json['user'] as Map<String, dynamic>
+        : json;
+    return UserModel(
+      alias: data['alias'] as String? ?? data['name'] as String? ?? '',
+      generatedUsername: data['generatedUsername'] as String?,
+      isPremium: data['isPremium'] as bool? ?? false,
+      planType: data['planType'] as String?,
+      expiryDate: data['expiryDate'] as String?,
+      messagesLeft: data['messagesLeft'] as int?,
+    );
+  }
+
   UserModel copyWith({
     String? alias,
     String? generatedUsername,
     bool? isPremium,
     String? planType,
     String? expiryDate,
+    int? messagesLeft,
   }) {
     return UserModel(
       alias: alias ?? this.alias,
@@ -44,15 +63,46 @@ class UserModel {
       isPremium: isPremium ?? this.isPremium,
       planType: planType ?? this.planType,
       expiryDate: expiryDate ?? this.expiryDate,
+      messagesLeft: messagesLeft ?? this.messagesLeft,
     );
   }
 
   @override
   String toString() =>
-      'UserModel(alias: $alias, isPremium: $isPremium, plan: $planType)';
+      'UserModel(alias: $alias, isPremium: $isPremium, plan: $planType, messagesLeft: $messagesLeft)';
 }
 
-/// Response from /api/user/register-premium
+// ─── Auth response (signup + login) ──────────────────────────────────────────
+
+class AuthResponse {
+  final bool success;
+  final String? token;
+  final UserModel? user;
+  final String? error;
+
+  const AuthResponse({
+    required this.success,
+    this.token,
+    this.user,
+    this.error,
+  });
+
+  factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    UserModel? user;
+    if (json.containsKey('user') && json['user'] != null) {
+      user = UserModel.fromProfileJson(json);
+    }
+    return AuthResponse(
+      success: json['success'] as bool? ?? false,
+      token: json['token'] as String?,
+      user: user,
+      error: json['error'] as String?,
+    );
+  }
+}
+
+// ─── Register premium response ────────────────────────────────────────────────
+
 class RegisterPremiumResponse {
   final bool success;
   final String? generatedUsername;

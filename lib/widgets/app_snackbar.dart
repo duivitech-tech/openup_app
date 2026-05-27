@@ -60,7 +60,7 @@ class AppSnackbar {
           ),
         ],
       ),
-      borderColor: iconColor.withOpacity(0.3),
+      borderColor: iconColor.withValues(alpha: 0.3),
       borderWidth: 0.5,
     );
   }

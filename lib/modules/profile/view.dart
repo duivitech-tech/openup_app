@@ -102,7 +102,7 @@ class ProfileView extends GetView<ProfileController> {
                 'DANGER ZONE',
                 style: AppTextStyles.labelSmall.copyWith(
                   letterSpacing: 1.5,
-                  color: AppColors.destructive.withOpacity(0.6),
+                  color: AppColors.destructive.withValues(alpha: 0.6),
                 ),
               ),
               const SizedBox(height: 8),
@@ -136,7 +136,7 @@ class ProfileView extends GetView<ProfileController> {
                 child: TextLinkButton(
                   label: 'End session',
                   onPressed: controller.endSession,
-                  color: AppColors.textSecondary.withOpacity(0.6),
+                  color: AppColors.textSecondary.withValues(alpha: 0.6),
                 ),
               ),
 
@@ -177,10 +177,10 @@ class _IdentityCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.accentPurple.withOpacity(0.12),
+                  color: AppColors.accentPurple.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.accentPurple.withOpacity(0.3),
+                    color: AppColors.accentPurple.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),

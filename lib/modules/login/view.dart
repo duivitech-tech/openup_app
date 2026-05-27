@@ -1,15 +1,13 @@
-// lib/modules/identity/view.dart
+// lib/modules/login/view.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../routes/app_routes.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/primary_button.dart';
-import '../../widgets/private_id_card.dart';
 import 'controller.dart';
 
-class IdentityView extends GetView<IdentityController> {
-  const IdentityView({super.key});
+class LoginView extends GetView<LoginController> {
+  const LoginView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +37,7 @@ class IdentityView extends GetView<IdentityController> {
                     ),
                   ),
                   child: const Icon(
-                    Icons.person_outline_rounded,
+                    Icons.lock_outline_rounded,
                     size: 20,
                     color: AppColors.accentPurple,
                   ),
@@ -49,7 +47,7 @@ class IdentityView extends GetView<IdentityController> {
 
                 // Title
                 Text(
-                  'Create your\nprivate identity',
+                  'Login with your\nprivate identity',
                   style: AppTextStyles.displayLarge.copyWith(
                     fontSize: 26,
                     fontWeight: FontWeight.w400,
@@ -60,7 +58,7 @@ class IdentityView extends GetView<IdentityController> {
                 const SizedBox(height: 8),
 
                 Text(
-                  'No name, phone, or email collected.',
+                  'Enter the alias and PIN you created.',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary.withValues(alpha: 0.8),
                   ),
@@ -84,7 +82,7 @@ class IdentityView extends GetView<IdentityController> {
                   style: AppTextStyles.bodyMedium,
                   maxLength: 16,
                   decoration: const InputDecoration(
-                    hintText: 'choose an alias',
+                    hintText: 'your alias',
                     counterText: '',
                   ),
                 ),
@@ -106,7 +104,7 @@ class IdentityView extends GetView<IdentityController> {
                       obscureText: !controller.pinVisible.value,
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => controller.enterOpenUp(),
+                      onFieldSubmitted: (_) => controller.login(),
                       maxLength: 4,
                       style: AppTextStyles.bodyMedium,
                       decoration: InputDecoration(
@@ -125,21 +123,12 @@ class IdentityView extends GetView<IdentityController> {
                       ),
                     )),
 
-                const SizedBox(height: 28),
-
-                // Preview ID card
-                Obx(() => PrivateIDCard(
-                      id: controller.previewId,
-                      label: 'Your private session ID',
-                      helperText: 'Save this. We cannot recover it.',
-                    )),
-
                 const SizedBox(height: 36),
 
                 // CTA
                 Obx(() => PrimaryButton(
                       label: 'Enter OpenUp',
-                      onPressed: controller.enterOpenUp,
+                      onPressed: controller.login,
                       isLoading: controller.isLoading.value,
                     )),
 
@@ -164,19 +153,19 @@ class IdentityView extends GetView<IdentityController> {
 
                 const SizedBox(height: 20),
 
-                // Go to login
+                // Go to signup
                 Center(
                   child: GestureDetector(
-                    onTap: () => Get.offAllNamed(AppRoutes.login),
+                    onTap: controller.goToSignup,
                     child: RichText(
                       text: TextSpan(
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary.withValues(alpha: 0.6),
                         ),
                         children: [
-                          const TextSpan(text: 'Already have an identity? '),
+                          const TextSpan(text: "Don't have an identity? "),
                           TextSpan(
-                            text: 'Log in',
+                            text: 'Create one',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.accentPurple,
                               fontWeight: FontWeight.w500,

@@ -107,6 +107,11 @@ class StorageService extends GetxService {
   Future<String?> getPin() => getString(AppConstants.keyPin);
   Future<void> setPin(String pin) => setString(AppConstants.keyPin, pin);
 
+  Future<String?> getAuthToken() => getString(AppConstants.keyAuthToken);
+  Future<void> setAuthToken(String token) =>
+      setString(AppConstants.keyAuthToken, token);
+  Future<void> deleteAuthToken() => delete(AppConstants.keyAuthToken);
+
   /// Clears all user data but preserves the device ID.
   Future<void> clearUserData() async {
     debugPrint('[Storage] clearUserData — preserving deviceId');

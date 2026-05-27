@@ -7,6 +7,8 @@ import '../modules/onboarding/binding.dart';
 import '../modules/onboarding/view.dart';
 import '../modules/identity/binding.dart';
 import '../modules/identity/view.dart';
+import '../modules/login/binding.dart';
+import '../modules/login/view.dart';
 import '../modules/home/binding.dart';
 import '../modules/home/view.dart';
 import '../modules/chat/binding.dart';
@@ -22,14 +24,15 @@ import '../modules/profile/view.dart';
 class AppRoutes {
   AppRoutes._();
 
-  static const String splash = '/';
-  static const String onboarding = '/onboarding';
-  static const String identity = '/identity';
-  static const String home = '/home';
-  static const String chat = '/chat';
-  static const String premium = '/premium';
+  static const String splash          = '/';
+  static const String onboarding      = '/onboarding';
+  static const String identity        = '/identity';
+  static const String login           = '/login';
+  static const String home            = '/home';
+  static const String chat            = '/chat';
+  static const String premium         = '/premium';
   static const String premiumRegister = '/premium/register';
-  static const String profile = '/profile';
+  static const String profile         = '/profile';
 }
 
 /// All GetPage definitions with bindings and transitions.
@@ -55,6 +58,13 @@ class AppPages {
       name: AppRoutes.identity,
       page: () => const IdentityView(),
       binding: IdentityBinding(),
+      transition: Transition.fade,
+      transitionDuration: const Duration(milliseconds: 200),
+    ),
+    GetPage(
+      name: AppRoutes.login,
+      page: () => const LoginView(),
+      binding: LoginBinding(),
       transition: Transition.fade,
       transitionDuration: const Duration(milliseconds: 200),
     ),

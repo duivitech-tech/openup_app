@@ -194,7 +194,7 @@ class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: AppTextStyles.bodyMedium
-            .copyWith(color: AppColors.textSecondary.withOpacity(0.6)),
+            .copyWith(color: AppColors.textSecondary.withValues(alpha: 0.6)),
         labelStyle: AppTextStyles.bodySmall,
         errorStyle: AppTextStyles.caption.copyWith(color: AppColors.destructive),
         isDense: false,
