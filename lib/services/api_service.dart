@@ -21,13 +21,12 @@ class ApiService extends GetxService {
 
   Dio get _dio => _dioClient.dio;
 
+  Options _bearer(String token) =>
+      Options(headers: {'Authorization': 'Bearer $token'});
 
+  // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-  // ─── Auth endpoints ───────────────────────────────────────────────────────────
-
-  /// POST /api/auth/signup
-  /// Body: { deviceId, alias, pin }
-  /// Returns: { success, token, user: { alias, ... } }
+  /// POST /api/auth/signup → { success, userId, accessToken, refreshToken }
   Future<AuthResponse> signup({
     required String deviceId,
     required String alias,
@@ -43,16 +42,12 @@ class ApiService extends GetxService {
       return AuthResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('[ApiService] signup DioException: ${e.response?.statusCode} ${e.response?.data}');
-      if (e.response?.statusCode == 409) {
-        throw const AlreadyRegisteredException();
-      }
+      if (e.response?.statusCode == 409) throw const AlreadyRegisteredException();
       throw _toDomainError(e);
     }
   }
 
-  /// POST /api/auth/login
-  /// Body: { deviceId, alias, pin }
-  /// Returns: { success, token, user: { alias, ... } }
+  /// POST /api/auth/login → { success, userId, name, accessToken, refreshToken, ... }
   Future<AuthResponse> login({
     required String deviceId,
     required String alias,
@@ -68,49 +63,59 @@ class ApiService extends GetxService {
       return AuthResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('[ApiService] login DioException: ${e.response?.statusCode} ${e.response?.data}');
-      if (e.response?.statusCode == 401) {
-        throw const InvalidCredentialsException();
-      }
-      if (e.response?.statusCode == 404) {
-        throw const UserNotFoundException();
-      }
+      if (e.response?.statusCode == 401) throw const InvalidCredentialsException();
+      if (e.response?.statusCode == 404) throw const UserNotFoundException();
       throw _toDomainError(e);
     }
   }
 
-  /// GET /api/user/profile?userId=
-  /// Returns: { id, name, deviceId, isPremium, subscriptionExpiry, messagesLeft }
-  Future<UserModel> fetchProfile(String userId) async {
+  /// POST /api/auth/refresh → { accessToken }
+  Future<String> refreshAccessToken(String refreshToken) async {
+    debugPrint('[ApiService] POST ${ApiConstants.authRefresh}');
+    try {
+      final response = await _dio.post(
+        ApiConstants.authRefresh,
+        data: {'refreshToken': refreshToken},
+      );
+      final newToken = (response.data as Map<String, dynamic>)['accessToken'] as String;
+      debugPrint('[ApiService] refreshAccessToken success');
+      return newToken;
+    } on DioException catch (e) {
+      debugPrint('[ApiService] refreshAccessToken DioException: ${e.response?.statusCode}');
+      if (e.response?.statusCode == 401) throw const SessionExpiredException();
+      throw _toDomainError(e);
+    }
+  }
+
+  /// GET /api/user/profile — Bearer accessToken
+  Future<UserModel> fetchProfile(String accessToken) async {
     debugPrint('[ApiService] GET ${ApiConstants.userProfile}');
     try {
       final response = await _dio.get(
         ApiConstants.userProfile,
-        queryParameters: {'userId': userId},
+        options: _bearer(accessToken),
       );
       debugPrint('[ApiService] fetchProfile response: ${response.statusCode} ${response.data}');
       return UserModel.fromProfileJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('[ApiService] fetchProfile DioException: ${e.response?.statusCode}');
-      if (e.response?.statusCode == 401) {
-        throw const SessionExpiredException();
-      }
+      if (e.response?.statusCode == 401) throw const SessionExpiredException();
       throw _toDomainError(e);
     }
   }
 
-  /// POST /api/user/logout
-  /// Body: { userId }
-  Future<void> logout(String userId) async {
-    debugPrint('[ApiService] POST ${ApiConstants.userLogout}');
+  /// POST /api/auth/logout — Bearer accessToken
+  Future<void> logout(String accessToken) async {
+    debugPrint('[ApiService] POST ${ApiConstants.authLogout}');
     try {
-      final response = await _dio.post(
-        ApiConstants.userLogout,
-        data: {'userId': userId},
+      await _dio.post(
+        ApiConstants.authLogout,
+        options: _bearer(accessToken),
       );
-      debugPrint('[ApiService] logout response: ${response.statusCode}');
+      debugPrint('[ApiService] logout success');
     } on DioException catch (e) {
       debugPrint('[ApiService] logout DioException: ${e.response?.statusCode} — ignoring');
-      // Logout errors are non-fatal — always clear local data
+      // Non-fatal — always clear local data regardless
     }
   }
 
@@ -144,9 +149,7 @@ class ApiService extends GetxService {
       return DeductResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('[ApiService] deductMessage DioException: ${e.response?.statusCode}');
-      if (e.response?.statusCode == 403) {
-        throw const PaywallException();
-      }
+      if (e.response?.statusCode == 403) throw const PaywallException();
       throw _toDomainError(e);
     }
   }
@@ -166,9 +169,7 @@ class ApiService extends GetxService {
       if (!(data['success'] as bool? ?? false)) {
         throw const ServerException('Payment initiation failed');
       }
-      final url = data['paymentUrl'] as String;
-      debugPrint('[ApiService] paymentUrl=$url');
-      return url;
+      return data['paymentUrl'] as String;
     } on DioException catch (e) {
       debugPrint('[ApiService] initiatePayment DioException: ${e.response?.statusCode}');
       throw _toDomainError(e);
@@ -197,9 +198,7 @@ class ApiService extends GetxService {
       if (e.response?.statusCode == 400) {
         final data = e.response?.data as Map<String, dynamic>?;
         final err = data?['error'] as String?;
-        if (err != null && err.contains('already registered')) {
-          throw const AlreadyRegisteredException();
-        }
+        if (err != null && err.contains('already registered')) throw const AlreadyRegisteredException();
         throw ServerException(err ?? 'Registration failed', statusCode: 400);
       }
       if (e.response?.statusCode == 402) throw const NoPaymentException();

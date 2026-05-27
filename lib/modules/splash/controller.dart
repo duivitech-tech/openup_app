@@ -1,8 +1,8 @@
 // lib/modules/splash/controller.dart
 // Navigation logic:
 // 1. No deviceId → Onboarding
-// 2. Has deviceId + userId → Home (returning authenticated user)
-// 3. Has deviceId + alias but no userId → Login (had local account, needs to re-authenticate)
+// 2. Has deviceId + accessToken or refreshToken → Home (returning authenticated user)
+// 3. Has deviceId + alias but no tokens → Login
 // 4. Has deviceId but no alias → Identity (new user)
 
 import 'package:flutter/foundation.dart';
@@ -58,18 +58,22 @@ class SplashController extends GetxController {
       return;
     }
 
-    // ── Step 2: Check userId (set on login/signup) ──────────────────────────
-    String? userId;
+    // ── Step 2: Check tokens (accessToken or refreshToken = logged in) ─────────
+    String? accessToken;
+    String? refreshToken;
     try {
-      userId = await _storage.getUserId();
-      debugPrint('[SplashController] userId=$userId');
+      accessToken = await _storage.getAuthToken();
+      refreshToken = await _storage.getRefreshToken();
+      debugPrint('[SplashController] accessToken=${accessToken != null ? 'present' : 'null'}, refreshToken=${refreshToken != null ? 'present' : 'null'}');
     } catch (e) {
-      debugPrint('[SplashController] userId read error: $e');
+      debugPrint('[SplashController] token read error: $e');
     }
 
-    if (userId != null && userId.isNotEmpty) {
-      // Has userId — returning authenticated user → Home
-      debugPrint('[SplashController] userId found — going Home');
+    final hasSession = (accessToken != null && accessToken.isNotEmpty) ||
+        (refreshToken != null && refreshToken.isNotEmpty);
+
+    if (hasSession) {
+      debugPrint('[SplashController] Session found — going Home');
       _deviceRepo.initDevice().ignore();
       Get.offAllNamed(AppRoutes.home);
       return;

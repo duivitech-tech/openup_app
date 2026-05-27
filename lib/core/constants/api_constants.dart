@@ -12,18 +12,16 @@ class ApiConstants {
   // Payment endpoints
   static const String paymentInitiate = '/api/payment/initiate';
 
+  // Auth endpoints
+  static const String authSignup   = '/api/auth/signup';   // POST {deviceId, name, password}
+  static const String authLogin    = '/api/auth/login';    // POST {name, password}
+  static const String authRefresh  = '/api/auth/refresh';  // POST {refreshToken}
+  static const String authLogout   = '/api/auth/logout';   // POST Bearer accessToken
+
   // User endpoints
   static const String registerPremium = '/api/user/register-premium';
   static const String checkName       = '/api/user/check-name';
-  static const String userProfile     = '/api/user/profile';   // GET  ?userId=
-  static const String userLogout      = '/api/user/logout';    // POST { userId }
-
-  // Auth endpoints
-  static const String authSignup  = '/api/auth/signup';   // POST {deviceId, alias, pin}
-  static const String authLogin   = '/api/auth/login';    // POST {deviceId, alias, pin}
-  // Deprecated — kept for reference
-  static const String authProfile = '/api/auth/profile';
-  static const String authLogout  = '/api/auth/logout';
+  static const String userProfile     = '/api/user/profile';  // GET Bearer accessToken
 
   // Timeouts
   static const int connectTimeout = 10000; // 10 seconds

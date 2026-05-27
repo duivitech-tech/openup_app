@@ -112,6 +112,11 @@ class StorageService extends GetxService {
       setString(AppConstants.keyAuthToken, token);
   Future<void> deleteAuthToken() => delete(AppConstants.keyAuthToken);
 
+  Future<String?> getRefreshToken() => getString(AppConstants.keyRefreshToken);
+  Future<void> setRefreshToken(String token) =>
+      setString(AppConstants.keyRefreshToken, token);
+  Future<void> deleteRefreshToken() => delete(AppConstants.keyRefreshToken);
+
   Future<String?> getUserId() => getString(AppConstants.keyUserId);
   Future<void> setUserId(String id) => setString(AppConstants.keyUserId, id);
   Future<void> deleteUserId() => delete(AppConstants.keyUserId);
