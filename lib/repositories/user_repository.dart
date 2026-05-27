@@ -89,13 +89,14 @@ class UserRepository extends GetxService {
     }
   }
 
-  /// Fetches fresh profile using accessToken, auto-refreshes if expired.
+  /// Fetches fresh profile using stored accessToken.
+  /// The Dio interceptor handles 401 → auto-refresh → retry transparently.
   /// Falls back to storage on network failure.
   Future<UserModel?> fetchProfile() async {
     debugPrint('[UserRepository] fetchProfile called');
-    final accessToken = await _getValidAccessToken();
-    if (accessToken == null) {
-      debugPrint('[UserRepository] fetchProfile: no valid token — returning storage fallback');
+    final accessToken = await _storage.getAuthToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      debugPrint('[UserRepository] fetchProfile: no accessToken — returning storage fallback');
       return loadUserFromStorage();
     }
 
@@ -137,39 +138,6 @@ class UserRepository extends GetxService {
   }
 
   // ─── Token management ─────────────────────────────────────────────────────────
-
-  /// Returns a valid accessToken — tries to refresh if missing/expired.
-  /// Returns null if refresh also fails (user must re-login).
-  Future<String?> _getValidAccessToken() async {
-    final accessToken = await _storage.getAuthToken();
-    if (accessToken != null && accessToken.isNotEmpty) return accessToken;
-
-    // accessToken missing — try refresh
-    debugPrint('[UserRepository] accessToken missing — attempting refresh');
-    return _tryRefresh();
-  }
-
-  /// Exchanges refreshToken for a new accessToken. Returns null on failure.
-  Future<String?> _tryRefresh() async {
-    final refreshToken = await _storage.getRefreshToken();
-    if (refreshToken == null || refreshToken.isEmpty) {
-      debugPrint('[UserRepository] No refreshToken available');
-      return null;
-    }
-    try {
-      final newAccessToken = await _apiService.refreshAccessToken(refreshToken);
-      await _storage.setAuthToken(newAccessToken);
-      debugPrint('[UserRepository] Token refreshed successfully');
-      return newAccessToken;
-    } on SessionExpiredException {
-      debugPrint('[UserRepository] Refresh token expired — clearing all tokens');
-      await _clearTokens();
-      return null;
-    } catch (e) {
-      debugPrint('[UserRepository] Token refresh failed: $e');
-      return null;
-    }
-  }
 
   Future<void> _clearTokens() async {
     await _storage.deleteAuthToken();
