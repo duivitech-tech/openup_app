@@ -24,9 +24,9 @@ class PremiumRegisterView extends GetView<PremiumRegisterController> {
       ),
       body: Obx(() {
         if (controller.showWebView.value) {
-          return _PaymentWebView(controller: controller);
+          return const _PaymentWebView();
         }
-        return _RegistrationForm(controller: controller);
+        return const _RegistrationForm();
       }),
     );
   }
@@ -34,9 +34,9 @@ class PremiumRegisterView extends GetView<PremiumRegisterController> {
 
 /// WebView that opens PhonePe payment URL.
 class _PaymentWebView extends StatelessWidget {
-  final PremiumRegisterController controller;
+  const _PaymentWebView();
 
-  const _PaymentWebView({required this.controller});
+  PremiumRegisterController get c => Get.find<PremiumRegisterController>();
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +64,7 @@ class _PaymentWebView extends StatelessWidget {
         Expanded(
           child: InAppWebView(
             initialUrlRequest: URLRequest(
-              url: WebUri(controller.paymentUrl.value),
+              url: WebUri(c.paymentUrl.value),
             ),
             initialSettings: InAppWebViewSettings(
               javaScriptEnabled: true,
@@ -77,14 +77,14 @@ class _PaymentWebView extends StatelessWidget {
               if (urlStr.contains('success') ||
                   urlStr.contains('redirect') ||
                   urlStr.contains('openup-backend.vercel.app')) {
-                controller.onPaymentComplete();
+                c.onPaymentComplete();
               } else if (urlStr.contains('fail') ||
                   urlStr.contains('cancel')) {
-                controller.onPaymentFailed();
+                c.onPaymentFailed();
               }
             },
             onReceivedError: (wc, req, err) {
-              controller.onPaymentFailed();
+              c.onPaymentFailed();
             },
           ),
         ),
@@ -95,9 +95,9 @@ class _PaymentWebView extends StatelessWidget {
 
 /// Registration form after payment is completed.
 class _RegistrationForm extends StatelessWidget {
-  final PremiumRegisterController controller;
+  const _RegistrationForm();
 
-  const _RegistrationForm({required this.controller});
+  PremiumRegisterController get c => Get.find<PremiumRegisterController>();
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +106,7 @@ class _RegistrationForm extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Form(
-          key: controller.formKey,
+          key: c.formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -114,7 +114,7 @@ class _RegistrationForm extends StatelessWidget {
 
               // Payment success indicator (if payment was completed)
               Obx(() {
-                if (!controller.paymentCompleted.value) {
+                if (!c.paymentCompleted.value) {
                   return const SizedBox.shrink();
                 }
                 return Container(
@@ -181,7 +181,7 @@ class _RegistrationForm extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          _planLabel(controller.planType.value),
+                          _planLabel(c.planType.value),
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.accentPurple,
                           ),
@@ -202,8 +202,8 @@ class _RegistrationForm extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               TextFormField(
-                controller: controller.nicknameController,
-                validator: controller.validateNickname,
+                controller: c.nicknameController,
+                validator: c.validateNickname,
                 textInputAction: TextInputAction.next,
                 style: AppTextStyles.bodyMedium,
                 maxLength: 16,
@@ -225,9 +225,9 @@ class _RegistrationForm extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Obx(() => TextFormField(
-                    controller: controller.pinController,
-                    validator: controller.validatePin,
-                    obscureText: !controller.pinVisible.value,
+                    controller: c.pinController,
+                    validator: c.validatePin,
+                    obscureText: !c.pinVisible.value,
                     keyboardType: TextInputType.number,
                     textInputAction: TextInputAction.done,
                     maxLength: 4,
@@ -236,9 +236,9 @@ class _RegistrationForm extends StatelessWidget {
                       hintText: '• • • •',
                       counterText: '',
                       suffixIcon: GestureDetector(
-                        onTap: controller.togglePinVisibility,
+                        onTap: c.togglePinVisibility,
                         child: Icon(
-                          controller.pinVisible.value
+                          c.pinVisible.value
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                           size: 18,
@@ -253,8 +253,8 @@ class _RegistrationForm extends StatelessWidget {
               // CTA
               Obx(() => PrimaryButton(
                     label: 'Activate my access',
-                    onPressed: controller.activateAccess,
-                    isLoading: controller.isLoading.value,
+                    onPressed: c.activateAccess,
+                    isLoading: c.isLoading.value,
                   )),
 
               const SizedBox(height: 16),

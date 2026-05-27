@@ -1,12 +1,19 @@
 // lib/widgets/ghost_button.dart
+// StatelessWidget — press scale driven by an inline GetxController
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../themes/app_theme.dart';
 
-/// Full-width outline border button with same dimensions as PrimaryButton.
-class GhostButton extends StatefulWidget {
+class _ButtonController extends GetxController {
+  final isPressed = false.obs;
+}
+
+class GhostButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
+  final double? width;
   final Color? borderColor;
   final Color? textColor;
 
@@ -14,69 +21,57 @@ class GhostButton extends StatefulWidget {
     super.key,
     required this.label,
     this.onPressed,
+    this.width,
     this.borderColor,
     this.textColor,
   });
 
   @override
-  State<GhostButton> createState() => _GhostButtonState();
-}
-
-class _GhostButtonState extends State<GhostButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 80),
-      reverseDuration: const Duration(milliseconds: 100),
-      lowerBound: 0.97,
-      upperBound: 1.0,
-      value: 1.0,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isEnabled = widget.onPressed != null;
-    final borderColor = widget.borderColor ?? AppColors.border;
-    final textColor = widget.textColor ?? AppColors.textSecondary;
+    final tag = 'ghost_${label.hashCode}_$hashCode';
+    final ctrl = Get.put(_ButtonController(), tag: tag);
 
-    return GestureDetector(
-      onTapDown: isEnabled ? (_) => _controller.reverse() : null,
-      onTapUp: isEnabled ? (_) => _controller.forward() : null,
-      onTapCancel: isEnabled ? _controller.forward : null,
-      onTap: widget.onPressed,
-      child: ScaleTransition(
-        scale: _controller,
-        child: Container(
-          height: 52,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          child: Center(
-            child: Text(
-              widget.label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w400,
+    return Obx(() {
+      final isPressed = ctrl.isPressed.value;
+      return GestureDetector(
+        onTapDown: (_) {
+          ctrl.isPressed.value = true;
+          HapticFeedback.lightImpact();
+        },
+        onTapUp: (_) {
+          ctrl.isPressed.value = false;
+          onPressed?.call();
+        },
+        onTapCancel: () => ctrl.isPressed.value = false,
+        child: AnimatedScale(
+          scale: isPressed ? 0.96 : 1.0,
+          duration: const Duration(milliseconds: 100),
+          child: Container(
+            width: width ?? double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              color: isPressed
+                  ? (borderColor ?? AppColors.accentPurple).withValues(alpha: 0.06)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: borderColor ?? AppColors.border,
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: textColor ?? AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 15,
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

@@ -20,7 +20,7 @@ class HomeView extends GetView<HomeController> {
         child: Column(
           children: [
             // Top bar
-            _TopBar(controller: controller),
+            _TopBar(),
 
             // Main content
             Expanded(
@@ -44,7 +44,7 @@ class HomeView extends GetView<HomeController> {
                       if (controller.isPremium.value) {
                         return const SizedBox.shrink();
                       }
-                      return _UsageStrip(controller: controller);
+                      return _UsageStrip();
                     }),
 
                     const SizedBox(height: 28),
@@ -69,9 +69,9 @@ class HomeView extends GetView<HomeController> {
 }
 
 class _TopBar extends StatelessWidget {
-  final HomeController controller;
+  const _TopBar();
 
-  const _TopBar({required this.controller});
+  HomeController get c => Get.find<HomeController>();
 
   @override
   Widget build(BuildContext context) {
@@ -80,14 +80,14 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           Obx(() => Text(
-                'hey, ${controller.alias.value}',
+                'hey, ${c.alias.value}',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
               )),
           const Spacer(),
           GestureDetector(
-            onTap: controller.goToSettings,
+            onTap: c.goToSettings,
             child: Container(
               width: 36,
               height: 36,
@@ -110,9 +110,9 @@ class _TopBar extends StatelessWidget {
 }
 
 class _UsageStrip extends StatelessWidget {
-  final HomeController controller;
+  const _UsageStrip();
 
-  const _UsageStrip({required this.controller});
+  HomeController get c => Get.find<HomeController>();
 
   @override
   Widget build(BuildContext context) {
@@ -133,13 +133,13 @@ class _UsageStrip extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Obx(() => Text(
-                  '${controller.messagesLeft.value} free messages left today',
+                  '${c.messagesLeft.value} free messages left today',
                   style: AppTextStyles.bodySmall,
                 )),
           ),
           TextLinkButton(
             label: 'Unlock unlimited →',
-            onPressed: controller.goToPremium,
+            onPressed: c.goToPremium,
             color: AppColors.accentPurple,
             fontSize: 12,
           ),

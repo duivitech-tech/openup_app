@@ -41,7 +41,7 @@ class ProfileView extends GetView<ProfileController> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Identity card
-              _IdentityCard(controller: controller),
+              _IdentityCard(),
 
               const SizedBox(height: 28),
 
@@ -150,13 +150,13 @@ class ProfileView extends GetView<ProfileController> {
 }
 
 class _IdentityCard extends StatelessWidget {
-  final ProfileController controller;
+  const _IdentityCard();
 
-  const _IdentityCard({required this.controller});
+  ProfileController get c => Get.find<ProfileController>();
 
   @override
   Widget build(BuildContext context) {
-    final user = controller.user.value;
+    final user = c.user.value;
     if (user == null) return const SizedBox.shrink();
 
     return Container(
