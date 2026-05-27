@@ -33,17 +33,11 @@ class UserRepository extends GetxService {
         alias: alias,
         pin: pin,
       );
-      if (!response.success) {
-        throw ServerException(response.error ?? 'Signup failed');
-      }
-      debugPrint('[UserRepository] signup success — userId=${response.userId}');
-      await _persistAuthSession(
+      if (!response.success) throw ServerException(response.error ?? 'Signup failed');
+      await _persistSession(
         accessToken: response.accessToken ?? '',
         refreshToken: response.refreshToken ?? '',
-        userId: response.userId ?? '',
         alias: alias,
-        pin: pin,
-        user: response.user,
       );
       return response.user ?? UserModel(alias: alias);
     } on AppException catch (e) {
@@ -67,17 +61,11 @@ class UserRepository extends GetxService {
         alias: alias,
         pin: pin,
       );
-      if (!response.success) {
-        throw ServerException(response.error ?? 'Login failed');
-      }
-      debugPrint('[UserRepository] login success — userId=${response.userId}');
-      await _persistAuthSession(
+      if (!response.success) throw ServerException(response.error ?? 'Login failed');
+      await _persistSession(
         accessToken: response.accessToken ?? '',
         refreshToken: response.refreshToken ?? '',
-        userId: response.userId ?? '',
         alias: alias,
-        pin: pin,
-        user: response.user,
       );
       return response.user ?? UserModel(alias: alias);
     } on AppException catch (e) {
@@ -91,7 +79,7 @@ class UserRepository extends GetxService {
 
   /// Fetches fresh profile using stored accessToken.
   /// The Dio interceptor handles 401 → auto-refresh → retry transparently.
-  /// Falls back to storage on network failure.
+  /// Falls back to cached nickname on network failure.
   Future<UserModel?> fetchProfile() async {
     debugPrint('[UserRepository] fetchProfile called');
     final accessToken = await _storage.getAuthToken();
@@ -99,16 +87,11 @@ class UserRepository extends GetxService {
       debugPrint('[UserRepository] fetchProfile: no accessToken — returning storage fallback');
       return loadUserFromStorage();
     }
-
     try {
       final user = await _apiService.fetchProfile(accessToken);
       debugPrint('[UserRepository] fetchProfile success: ${user.alias}, isPremium=${user.isPremium}');
+      // Only cache the nickname for display — everything else comes from API
       await _storage.setNickname(user.alias);
-      await _storage.setIsPremium(user.isPremium);
-      if (user.messagesLeft != null) await _storage.setMessagesLeft(user.messagesLeft!);
-      if (user.planType != null) await _storage.setPlanType(user.planType!);
-      if (user.expiryDate != null) await _storage.setExpiryDate(user.expiryDate!);
-      if (user.generatedUsername != null) await _storage.setGeneratedUsername(user.generatedUsername!);
       return user;
     } on SessionExpiredException {
       debugPrint('[UserRepository] fetchProfile: session expired — clearing tokens');
@@ -137,16 +120,9 @@ class UserRepository extends GetxService {
     debugPrint('[UserRepository] logout: all data cleared');
   }
 
-  // ─── Token management ─────────────────────────────────────────────────────────
-
-  Future<void> _clearTokens() async {
-    await _storage.deleteAuthToken();
-    await _storage.deleteRefreshToken();
-    await _storage.deleteUserId();
-  }
-
   // ─── Local storage ────────────────────────────────────────────────────────────
 
+  /// Returns a minimal UserModel from cached nickname only.
   Future<UserModel?> loadUserFromStorage() async {
     debugPrint('[UserRepository] loadUserFromStorage called');
     final alias = await _storage.getNickname();
@@ -154,21 +130,7 @@ class UserRepository extends GetxService {
       debugPrint('[UserRepository] No alias in storage — returning null');
       return null;
     }
-    final user = UserModel.fromStorage(
-      alias: alias,
-      generatedUsername: await _storage.getGeneratedUsername(),
-      isPremiumStr: (await _storage.getIsPremium()) ? 'true' : 'false',
-      planType: await _storage.getPlanType(),
-      expiryDate: await _storage.getExpiryDate(),
-    );
-    debugPrint('[UserRepository] Loaded: alias=${user.alias}, isPremium=${user.isPremium}');
-    return user;
-  }
-
-  Future<void> saveLocalIdentity(String alias, String pin) async {
-    debugPrint('[UserRepository] saveLocalIdentity: alias=$alias');
-    await _storage.setNickname(alias);
-    await _storage.setPin(pin);
+    return UserModel(alias: alias);
   }
 
   Future<UserModel> registerPremium({
@@ -186,10 +148,6 @@ class UserRepository extends GetxService {
         planType: planType,
       );
       if (!response.success) throw ServerException(response.error ?? 'Registration failed');
-      await _storage.setGeneratedUsername(response.generatedUsername ?? '');
-      await _storage.setExpiryDate(response.expiryDate ?? '');
-      await _storage.setIsPremium(true);
-      await _storage.setNickname(name);
       return UserModel(
         alias: name,
         generatedUsername: response.generatedUsername,
@@ -220,26 +178,19 @@ class UserRepository extends GetxService {
 
   // ─── Private helpers ──────────────────────────────────────────────────────────
 
-  Future<void> _persistAuthSession({
+  Future<void> _persistSession({
     required String accessToken,
     required String refreshToken,
-    required String userId,
     required String alias,
-    required String pin,
-    UserModel? user,
   }) async {
     if (accessToken.isNotEmpty) await _storage.setAuthToken(accessToken);
     if (refreshToken.isNotEmpty) await _storage.setRefreshToken(refreshToken);
-    if (userId.isNotEmpty) await _storage.setUserId(userId);
     await _storage.setNickname(alias);
-    await _storage.setPin(pin);
-    if (user != null) {
-      await _storage.setIsPremium(user.isPremium);
-      if (user.planType != null) await _storage.setPlanType(user.planType!);
-      if (user.expiryDate != null) await _storage.setExpiryDate(user.expiryDate!);
-      if (user.generatedUsername != null) await _storage.setGeneratedUsername(user.generatedUsername!);
-      if (user.messagesLeft != null) await _storage.setMessagesLeft(user.messagesLeft!);
-    }
-    debugPrint('[UserRepository] Session persisted — alias=$alias, userId=$userId');
+    debugPrint('[UserRepository] Session persisted — alias=$alias');
+  }
+
+  Future<void> _clearTokens() async {
+    await _storage.deleteAuthToken();
+    await _storage.deleteRefreshToken();
   }
 }
