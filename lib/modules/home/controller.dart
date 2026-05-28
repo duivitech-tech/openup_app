@@ -2,7 +2,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import '../../models/user_model.dart';
 import '../../repositories/device_repository.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
@@ -33,38 +32,26 @@ class HomeController extends GetxController {
     debugPrint('[HomeController] _loadData called');
     isLoading.value = true;
     try {
-      // 1. Show cached values instantly
+      // Show cached nickname instantly
       final cachedAlias = await _storage.getNickname();
       alias.value = cachedAlias ?? 'friend';
-      isPremium.value = await _storage.getIsPremium();
-      final cachedMsgs = await _storage.getMessagesLeft();
-      messagesLeft.value = cachedMsgs ?? 0;
-      debugPrint('[HomeController] Cache — alias=$alias, msgs=$messagesLeft, premium=$isPremium');
 
-      // 2. Fetch fresh profile from API (has auth token)
-      debugPrint('[HomeController] Fetching profile from API…');
+      // Fetch fresh profile — source of truth for quota + premium
       final user = await _userRepo.fetchProfile();
-      _applyUser(user);
+      if (user != null) {
+        alias.value = user.alias.isNotEmpty ? user.alias : alias.value;
+        isPremium.value = user.isPremium;
+        messagesLeft.value = user.messagesLeft ?? 0;
+        debugPrint('[HomeController] Profile applied — alias=${user.alias}, premium=${user.isPremium}, msgs=${user.messagesLeft}');
+      }
 
-      // 3. Also refresh device state (messages quota)
-      debugPrint('[HomeController] Refreshing device quota…');
-      final device = await _deviceRepo.initDevice();
-      messagesLeft.value = device.messagesLeft;
-      isPremium.value = device.isPremium;
-      debugPrint('[HomeController] Device — msgs=${device.messagesLeft}, premium=${device.isPremium}');
+      // Register device in background (no data read from response)
+      _deviceRepo.initDevice().ignore();
     } catch (e) {
       debugPrint('[HomeController] _loadData error (using cache): $e');
     } finally {
       isLoading.value = false;
     }
-  }
-
-  void _applyUser(UserModel? user) {
-    if (user == null) return;
-    alias.value = user.alias.isNotEmpty ? user.alias : alias.value;
-    isPremium.value = user.isPremium;
-    if (user.messagesLeft != null) messagesLeft.value = user.messagesLeft!;
-    debugPrint('[HomeController] Profile applied — alias=${user.alias}, premium=${user.isPremium}');
   }
 
   void onNavTap(int index) {

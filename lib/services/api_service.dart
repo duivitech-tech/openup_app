@@ -121,7 +121,7 @@ class ApiService extends GetxService {
 
   // ─── Device ───────────────────────────────────────────────────────────────────
 
-  /// POST /api/device/init
+  /// POST /api/device/init → { registered: true }
   Future<DeviceModel> initDevice(String deviceId) async {
     debugPrint('[ApiService] POST ${ApiConstants.deviceInit} — deviceId=$deviceId');
     try {
@@ -137,13 +137,13 @@ class ApiService extends GetxService {
     }
   }
 
-  /// POST /api/device/deduct
-  Future<DeductResponse> deductMessage(String deviceId) async {
-    debugPrint('[ApiService] POST ${ApiConstants.deviceDeduct} — deviceId=$deviceId');
+  /// POST /api/device/deduct — Bearer accessToken, no body
+  Future<DeductResponse> deductMessage(String accessToken) async {
+    debugPrint('[ApiService] POST ${ApiConstants.deviceDeduct}');
     try {
       final response = await _dio.post(
         ApiConstants.deviceDeduct,
-        data: {'deviceId': deviceId},
+        options: _bearer(accessToken),
       );
       debugPrint('[ApiService] deductMessage response: ${response.statusCode} ${response.data}');
       return DeductResponse.fromJson(response.data as Map<String, dynamic>);

@@ -9,12 +9,10 @@ import '../../core/errors/app_exceptions.dart';
 import '../../models/message_model.dart';
 import '../../repositories/device_repository.dart';
 import '../../routes/app_routes.dart';
-import '../../services/storage_service.dart';
 import '../../widgets/app_snackbar.dart';
 
 class ChatController extends GetxController {
   late final DeviceRepository _deviceRepo;
-  late final StorageService _storage;
 
   final messages = <MessageModel>[].obs;
   final inputController = TextEditingController();
@@ -33,7 +31,6 @@ class ChatController extends GetxController {
     super.onInit();
     debugPrint('[ChatController] onInit');
     _deviceRepo = Get.find<DeviceRepository>();
-    _storage = Get.find<StorageService>();
 
     inputController.addListener(() {
       inputText.value = inputController.text;
@@ -75,21 +72,16 @@ class ChatController extends GetxController {
     isSendEnabled.value = false;
 
     try {
-      // Check message quota with backend BEFORE sending
-      final isPremium = await _storage.getIsPremium();
-      debugPrint('[ChatController] isPremium=$isPremium — checking deduct');
+      // Deduct message credit via JWT — backend handles premium check
+      debugPrint('[ChatController] Calling deductMessage…');
+      final deductResult = await _deviceRepo.deductMessage();
+      debugPrint('[ChatController] deductMessage result: allowed=${deductResult.allowed}, left=${deductResult.messagesLeft}');
 
-      if (!isPremium) {
-        debugPrint('[ChatController] Calling deductMessage…');
-        final deductResult = await _deviceRepo.deductMessage();
-        debugPrint('[ChatController] deductMessage result: allowed=${deductResult.allowed}, left=${deductResult.messagesLeft}');
-
-        if (!deductResult.allowed) {
-          debugPrint('[ChatController] Quota exceeded → PaywallException');
-          _updateMessageStatus(userMsg.id, MessageStatus.failed);
-          Get.toNamed(AppRoutes.premium);
-          return;
-        }
+      if (!deductResult.allowed) {
+        debugPrint('[ChatController] Quota exceeded → PaywallException');
+        _updateMessageStatus(userMsg.id, MessageStatus.failed);
+        Get.toNamed(AppRoutes.premium);
+        return;
       }
 
       // Mark message as sent

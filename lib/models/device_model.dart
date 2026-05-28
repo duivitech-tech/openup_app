@@ -1,36 +1,15 @@
 // lib/models/device_model.dart
 
 class DeviceModel {
-  final int messagesLeft;
-  final bool isPremium;
+  final bool registered;
 
-  const DeviceModel({
-    required this.messagesLeft,
-    required this.isPremium,
-  });
+  const DeviceModel({required this.registered});
 
   factory DeviceModel.fromJson(Map<String, dynamic> json) {
     return DeviceModel(
-      messagesLeft: (json['messagesLeft'] as num?)?.toInt() ?? 0,
-      isPremium: json['isPremium'] as bool? ?? false,
+      registered: json['registered'] as bool? ?? false,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'messagesLeft': messagesLeft,
-        'isPremium': isPremium,
-      };
-
-  DeviceModel copyWith({int? messagesLeft, bool? isPremium}) {
-    return DeviceModel(
-      messagesLeft: messagesLeft ?? this.messagesLeft,
-      isPremium: isPremium ?? this.isPremium,
-    );
-  }
-
-  @override
-  String toString() =>
-      'DeviceModel(messagesLeft: $messagesLeft, isPremium: $isPremium)';
 }
 
 /// Response from /api/device/deduct
