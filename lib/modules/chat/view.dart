@@ -81,16 +81,41 @@ class ChatView extends GetView<ChatController> {
         ),
         onPressed: () => Get.back(),
       ),
-      title: Column(
-        children: [
-          Text(
-            'AI listener',
-            style: AppTextStyles.titleMedium,
-          ),
-          const SizedBox(height: 2),
-          const SessionTag(),
-        ],
-      ),
+      title: Obx(() {
+        final isConnected = controller.isConnected.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Status dot
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isConnected ? const Color(0xFF4CAF50) : const Color(0xFF6B7280),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Title + subtitle
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'OpenUp',
+                  style: AppTextStyles.titleMedium,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isConnected ? "We don't judge" : 'Connecting...',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      }),
       actions: [
         IconButton(
           icon: const Icon(

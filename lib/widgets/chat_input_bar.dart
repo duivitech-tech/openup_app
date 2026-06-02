@@ -36,11 +36,16 @@ class ChatInputBar extends StatelessWidget {
         bottom: MediaQuery.of(context).padding.bottom + 12,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Text input
           Expanded(
             child: Container(
-              height: 48,
+              constraints: const BoxConstraints(
+                minHeight: 48,
+                maxHeight: 120,
+              ),
+              clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(24),
@@ -51,9 +56,10 @@ class ChatInputBar extends StatelessWidget {
                 focusNode: focusNode,
                 enabled: isEnabled,
                 maxLines: null,
+                minLines: 1,
                 keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend?.call(),
+                textInputAction: TextInputAction.newline,
+                scrollPhysics: const BouncingScrollPhysics(),
                 style: AppTextStyles.bodyMedium,
                 decoration: InputDecoration(
                   hintText: hint,

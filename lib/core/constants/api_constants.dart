@@ -3,7 +3,8 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'https://openup-backend.vercel.app';
+  static const String baseUrl     = 'https://openup-backend.vercel.app';
+  static const String chatBaseUrl = 'https://openup-chatbot.onrender.com';
 
   // Device endpoints
   static const String deviceInit   = '/api/device/init';
@@ -22,6 +23,9 @@ class ApiConstants {
   static const String registerPremium = '/api/user/register-premium';
   static const String checkName       = '/api/user/check-name';
   static const String userProfile     = '/api/user/profile';  // GET Bearer accessToken
+
+  // App endpoints
+  static const String checkAppUpdate  = '/api/app/update/check'; // GET ?platform=android&version=1.0.0&versionCode=1
 
   // Timeouts
   static const int connectTimeout = 10000; // 10 seconds

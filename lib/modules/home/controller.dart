@@ -2,15 +2,19 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import '../../repositories/app_update_repository.dart';
 import '../../repositories/device_repository.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/app_update_dialog.dart';
 
 class HomeController extends GetxController {
   late final StorageService _storage;
   late final DeviceRepository _deviceRepo;
   late final UserRepository _userRepo;
+  late final AppUpdateRepository _updateRepo;
 
   final alias = ''.obs;
   final messagesLeft = 0.obs;
@@ -25,7 +29,9 @@ class HomeController extends GetxController {
     _storage = Get.find<StorageService>();
     _deviceRepo = Get.find<DeviceRepository>();
     _userRepo = Get.find<UserRepository>();
+    _updateRepo = Get.find<AppUpdateRepository>();
     _loadData();
+    _checkForAppUpdate(); // always run on every init
   }
 
   Future<void> _loadData() async {
@@ -54,6 +60,45 @@ class HomeController extends GetxController {
     }
   }
 
+  /// Checks for an available app update every time the home screen is shown.
+  /// Shows the appropriate dialog (force or optional) without blocking the UI.
+  Future<void> _checkForAppUpdate() async {
+    debugPrint('[HomeController] _checkForAppUpdate called');
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final version = info.version;                           // e.g. "1.0.0"
+      final buildNumber = int.tryParse(info.buildNumber) ?? 1; // e.g. 1
+      debugPrint('[HomeController] App version=$version, versionCode=$buildNumber');
+
+      final update = await _updateRepo.checkForUpdate(
+        platform: 'android',
+        version: version,
+        versionCode: buildNumber,
+      );
+
+      if (update == null) {
+        debugPrint('[HomeController] Update check returned null — skipping');
+        return;
+      }
+
+      debugPrint('[HomeController] Update check result: $update');
+
+      if (!update.updateAvailable) {
+        debugPrint('[HomeController] No update available — nothing to show');
+        return;
+      }
+
+      // Small delay so the home screen renders first before showing the dialog
+      await Future.delayed(const Duration(milliseconds: 600));
+
+      // Show the dialog
+      await showAppUpdateDialog(update);
+    } catch (e) {
+      // Never crash the home screen because of an update check failure
+      debugPrint('[HomeController] _checkForAppUpdate error (silent): $e');
+    }
+  }
+
   void onNavTap(int index) {
     debugPrint('[HomeController] Nav tapped: $index');
     currentNavIndex.value = index;
@@ -67,9 +112,10 @@ class HomeController extends GetxController {
     Get.toNamed(AppRoutes.chat);
   }
 
+  // TODO(premium): Re-enable when payment gateway is ready.
   void goToPremium() {
-    debugPrint('[HomeController] goToPremium → navigating to Premium');
-    Get.toNamed(AppRoutes.premium);
+    debugPrint('[HomeController] goToPremium — premium disabled until payment gateway is ready');
+    // Get.toNamed(AppRoutes.premium);
   }
 
   void goToSettings() {

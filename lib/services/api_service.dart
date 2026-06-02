@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
 import '../core/constants/api_constants.dart';
 import '../core/errors/app_exceptions.dart';
+import '../models/app_update_model.dart';
 import '../models/device_model.dart';
 import '../models/user_model.dart';
 import '../network/dio_client.dart';
@@ -220,6 +221,32 @@ class ApiService extends GetxService {
       return available;
     } on DioException catch (e) {
       debugPrint('[ApiService] checkName DioException: ${e.response?.statusCode}');
+      throw _toDomainError(e);
+    }
+  }
+
+  // ─── App ──────────────────────────────────────────────────────────────────────
+
+  /// GET /api/app/update/check?platform=android&version=1.0.0&versionCode=1
+  Future<AppUpdateModel> checkAppUpdate({
+    required String platform,
+    required String version,
+    required int versionCode,
+  }) async {
+    debugPrint('[ApiService] GET ${ApiConstants.checkAppUpdate} — platform=$platform, version=$version, versionCode=$versionCode');
+    try {
+      final response = await _dio.get(
+        ApiConstants.checkAppUpdate,
+        queryParameters: {
+          'platform': platform,
+          'version': version,
+          'versionCode': versionCode,
+        },
+      );
+      debugPrint('[ApiService] checkAppUpdate response: ${response.statusCode} ${response.data}');
+      return AppUpdateModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      debugPrint('[ApiService] checkAppUpdate DioException: ${e.response?.statusCode} ${e.response?.data}');
       throw _toDomainError(e);
     }
   }

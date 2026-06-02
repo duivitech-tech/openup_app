@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../repositories/device_repository.dart';
 import '../repositories/payment_repository.dart';
 import '../repositories/user_repository.dart';
+import '../repositories/app_update_repository.dart';
 
 /// Injected at app startup via GetMaterialApp.initialBinding.
 /// All services registered here are permanent singletons.
@@ -26,5 +27,6 @@ class InitialBinding extends Bindings {
     Get.put<DeviceRepository>(DeviceRepository(), permanent: true);
     Get.put<PaymentRepository>(PaymentRepository(), permanent: true);
     Get.put<UserRepository>(UserRepository(), permanent: true);
+    Get.put<AppUpdateRepository>(AppUpdateRepository(), permanent: true);
   }
 }

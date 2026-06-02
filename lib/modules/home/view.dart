@@ -5,7 +5,8 @@ import 'package:get/get.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/app_bottom_nav_bar.dart';
 import '../../widgets/home_dash_card.dart';
-import '../../widgets/text_link_button.dart';
+// TODO(premium): Restore when payment gateway is ready.
+// import '../../widgets/text_link_button.dart';
 import '../profile/view.dart';
 import 'controller.dart';
 
@@ -110,16 +111,17 @@ class _UsageStrip extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Obx(() => Text(
-                  '${c.messagesLeft.value} free messages left today',
+                  '${c.messagesLeft.value} messages left today',
                   style: AppTextStyles.bodySmall,
                 )),
           ),
-          TextLinkButton(
-            label: 'Unlock unlimited →',
-            onPressed: c.goToPremium,
-            color: AppColors.accentPurple,
-            fontSize: 12,
-          ),
+          // TODO(premium): Restore "Unlock unlimited" button when payment gateway is ready.
+          // TextLinkButton(
+          //   label: 'Unlock unlimited →',
+          //   onPressed: c.goToPremium,
+          //   color: AppColors.accentPurple,
+          //   fontSize: 12,
+          // ),
         ],
       ),
     );

@@ -1,18 +1,21 @@
 // lib/modules/chat/controller.dart
 
-import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../core/errors/app_exceptions.dart';
 import '../../models/message_model.dart';
 import '../../repositories/device_repository.dart';
-import '../../routes/app_routes.dart';
+// TODO(premium): Restore when payment gateway is ready.
+// import '../../routes/app_routes.dart';
+import '../../services/chat_service.dart';
+import '../../services/storage_service.dart';
 import '../../widgets/app_snackbar.dart';
 
 class ChatController extends GetxController {
   late final DeviceRepository _deviceRepo;
+  late final ChatService _chatService;
+  late final StorageService _storage;
 
   final messages = <MessageModel>[].obs;
   final inputController = TextEditingController();
@@ -20,23 +23,26 @@ class ChatController extends GetxController {
   final focusNode = FocusNode();
 
   final isAiTyping = false.obs;
-  final isSendEnabled = true.obs;
+  final isSendEnabled = false.obs; // disabled until session starts
   final inputText = ''.obs;
+  final isConnected = false.obs;
 
-  // Track streaming for current AI message
-  StreamSubscription? _streamSubscription;
+  // Tracks the AI message being streamed
+  String? _streamingMessageId;
 
   @override
   void onInit() {
     super.onInit();
     debugPrint('[ChatController] onInit');
     _deviceRepo = Get.find<DeviceRepository>();
+    _chatService = Get.find<ChatService>();
+    _storage = Get.find<StorageService>();
 
     inputController.addListener(() {
       inputText.value = inputController.text;
     });
 
-    _addInitialGreeting();
+    _connectChat();
   }
 
   @override
@@ -44,14 +50,79 @@ class ChatController extends GetxController {
     inputController.dispose();
     scrollController.dispose();
     focusNode.dispose();
-    _streamSubscription?.cancel();
+    _chatService.disconnect();
     super.onClose();
   }
 
-  void _addInitialGreeting() {
-    messages.add(MessageModel.ai(
-      "Hey. What's on your mind? You can say anything here.",
-    ));
+  void _connectChat() async {
+    final alias = await _storage.getNickname() ?? 'User';
+
+    _chatService.onConnected = () {
+      debugPrint('[ChatController] Socket connected');
+      isConnected.value = true;
+    };
+
+    _chatService.onSessionStarted = (sessionId, greeting) {
+      debugPrint('[ChatController] Session started: $sessionId');
+      if (greeting.isNotEmpty) {
+        messages.add(MessageModel.ai(greeting));
+        _scrollToBottom();
+      }
+      isSendEnabled.value = true;
+    };
+
+    _chatService.onChunk = (chunk) {
+      if (_streamingMessageId == null) {
+        // First chunk — create a new AI message
+        final aiMsg = MessageModel.ai(chunk);
+        _streamingMessageId = aiMsg.id;
+        messages.add(aiMsg);
+      } else {
+        // Append chunk to existing streaming message
+        final index = messages.indexWhere((m) => m.id == _streamingMessageId);
+        if (index != -1) {
+          messages[index] = messages[index].copyWith(
+            content: messages[index].content + chunk,
+          );
+        }
+      }
+      _scrollToBottom();
+    };
+
+    _chatService.onResponse = (fullMessage) {
+      debugPrint('[ChatController] Full response received');
+      // If chunks were received, the message is already built — just finalize
+      // If no chunks came (fallback), add the full message now
+      if (_streamingMessageId == null) {
+        messages.add(MessageModel.ai(fullMessage));
+        _scrollToBottom();
+      }
+      _streamingMessageId = null;
+      isAiTyping.value = false;
+      isSendEnabled.value = true;
+    };
+
+    _chatService.onSessionEnded = (message) {
+      messages.add(MessageModel.system(message));
+      _scrollToBottom();
+      isSendEnabled.value = false;
+    };
+
+    _chatService.onError = (error) {
+      debugPrint('[ChatController] Socket error: $error');
+      isAiTyping.value = false;
+      isSendEnabled.value = true;
+      _streamingMessageId = null;
+      AppSnackbar.error(error);
+    };
+
+    _chatService.onDisconnected = () {
+      debugPrint('[ChatController] Socket disconnected');
+      isConnected.value = false;
+      isSendEnabled.value = false;
+    };
+
+    _chatService.connect(userName: alias);
   }
 
   Future<void> sendMessage() async {
@@ -60,11 +131,9 @@ class ChatController extends GetxController {
 
     debugPrint('[ChatController] sendMessage: "$text"');
 
-    // Clear input immediately
     inputController.clear();
     inputText.value = '';
 
-    // Add user message
     final userMsg = MessageModel.user(text);
     messages.add(userMsg);
     _scrollToBottom();
@@ -72,121 +141,47 @@ class ChatController extends GetxController {
     isSendEnabled.value = false;
 
     try {
-      // Deduct message credit via JWT — backend handles premium check
-      debugPrint('[ChatController] Calling deductMessage…');
+      // Deduct message credit via JWT
       final deductResult = await _deviceRepo.deductMessage();
-      debugPrint('[ChatController] deductMessage result: allowed=${deductResult.allowed}, left=${deductResult.messagesLeft}');
+      debugPrint('[ChatController] deductMessage: allowed=${deductResult.allowed}');
 
       if (!deductResult.allowed) {
-        debugPrint('[ChatController] Quota exceeded → PaywallException');
         _updateMessageStatus(userMsg.id, MessageStatus.failed);
-        Get.toNamed(AppRoutes.premium);
+        isSendEnabled.value = true;
+        // TODO(premium): Navigate to premium screen when payment gateway is ready.
+        // Get.toNamed(AppRoutes.premium);
+        _showDailyLimitDialog();
         return;
       }
 
-      // Mark message as sent
       _updateMessageStatus(userMsg.id, MessageStatus.sent);
-
-      // Show typing indicator
       isAiTyping.value = true;
       _scrollToBottom();
 
-      // Simulate AI typing delay
-      await Future.delayed(const Duration(milliseconds: 1200));
+      // Send to chatbot via socket
+      _chatService.sendMessage(text);
 
-      if (!isAiTyping.value) return; // Controller was closed
-
-      isAiTyping.value = false;
-
-      // Stream mock AI response
-      await _streamMockResponse(text);
     } on PaywallException {
-      debugPrint('[ChatController] PaywallException — navigating to premium');
+      debugPrint('[ChatController] PaywallException');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
-      Get.toNamed(AppRoutes.premium);
+      isAiTyping.value = false;
+      isSendEnabled.value = true;
+      // TODO(premium): Navigate to premium screen when payment gateway is ready.
+      // Get.toNamed(AppRoutes.premium);
+      _showDailyLimitDialog();
     } on AppException catch (e) {
       debugPrint('[ChatController] AppException: ${e.message}');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
+      isAiTyping.value = false;
+      isSendEnabled.value = true;
       AppSnackbar.error(e.message);
     } catch (e) {
       debugPrint('[ChatController] Unexpected error: $e');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
-      AppSnackbar.error('Something went wrong. Try again.');
-    } finally {
       isAiTyping.value = false;
       isSendEnabled.value = true;
+      AppSnackbar.error('Something went wrong. Try again.');
     }
-  }
-
-  Future<void> _streamMockResponse(String userMessage) async {
-    // Generate contextual mock responses
-    final response = _generateMockResponse(userMessage);
-
-    // Add an AI message with empty content to start
-    final aiMsg = MessageModel.ai('');
-    messages.add(aiMsg);
-    _scrollToBottom();
-
-    // Stream characters one by one
-    final buffer = StringBuffer();
-    for (int i = 0; i < response.length; i++) {
-      if (!isClosed) {
-        buffer.write(response[i]);
-        // Replace last message with updated content
-        final updated = aiMsg.copyWith(content: buffer.toString());
-        messages[messages.length - 1] = updated;
-        // Scroll as content grows
-        if (i % 15 == 0) _scrollToBottom();
-        await Future.delayed(const Duration(milliseconds: 18));
-      }
-    }
-    _scrollToBottom();
-  }
-
-  String _generateMockResponse(String userMessage) {
-    final lower = userMessage.toLowerCase();
-    final responses = <String>[
-      "That sounds like a lot to carry. Tell me more — what's been weighing on you most?",
-      "I hear you. Sometimes just saying it out loud helps. How long have you been feeling this way?",
-      "That makes sense. It's okay to not have it all figured out. What does your gut tell you?",
-      "It's a lot. Have you been able to talk to anyone about this, or is this the first time you're saying it?",
-      "I'm listening. What happened, if you don't mind sharing?",
-      "That's real. And it's okay. What do you think is at the core of it?",
-      "Sometimes the feelings that are hardest to say are the most important ones. You're doing something by saying it here.",
-      "Yeah. Take your time. There's no rush here.",
-      "I notice a lot of weight in what you're saying. Is this something that's been building for a while?",
-      "That's brave of you to put into words. What would it feel like if things were different?",
-    ];
-
-    // Try to pick a vaguely contextual response
-    if (lower.contains('sad') || lower.contains('depress') || lower.contains('cry')) {
-      return "It's okay to feel that way. Sadness isn't weakness — it's just your system telling you something matters. What's hurting the most right now?";
-    }
-    if (lower.contains('anxious') || lower.contains('anxiety') || lower.contains('worried') || lower.contains('stress')) {
-      return "Anxiety has a way of making everything feel urgent at once. Let's slow down for a second. What's the one thing that feels most out of control right now?";
-    }
-    if (lower.contains('alone') || lower.contains('lonely')) {
-      return "That feeling of being alone in a room full of people is one of the worst. I'm here, and I'm listening. What does that loneliness feel like for you?";
-    }
-    if (lower.contains('angry') || lower.contains('mad') || lower.contains('frustrated')) {
-      return "Anger usually means something's not right. What happened? Tell me the whole thing.";
-    }
-    if (lower.contains('tired') || lower.contains('exhausted') || lower.contains('burnout')) {
-      return "When was the last time you felt genuinely rested? Not just physically, but in your mind too?";
-    }
-    if (lower.contains('love') || lower.contains('relationship') || lower.contains('breakup')) {
-      return "Matters of the heart always deserve space. What's going on with the person you're thinking about?";
-    }
-    if (lower.contains('work') || lower.contains('job') || lower.contains('career')) {
-      return "Work stress is real and often underestimated. What's been the hardest part of it lately?";
-    }
-    if (lower.contains('hello') || lower.contains('hi') || lower.contains('hey')) {
-      return "Hey. Glad you're here. What's on your mind today?";
-    }
-
-    // Random fallback
-    final random = Random();
-    return responses[random.nextInt(responses.length)];
   }
 
   void _updateMessageStatus(String id, MessageStatus status) {
@@ -231,8 +226,10 @@ class ChatController extends GetxController {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.copy_rounded, color: Color(0xFF8A8A9A), size: 20),
-                title: const Text('Copy', style: TextStyle(color: Color(0xFFF0EEF4))),
+                leading: const Icon(Icons.copy_rounded,
+                    color: Color(0xFF8A8A9A), size: 20),
+                title: const Text('Copy',
+                    style: TextStyle(color: Color(0xFFF0EEF4))),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: message.content));
                   Get.back();
@@ -241,8 +238,10 @@ class ChatController extends GetxController {
               ),
               if (message.isUser)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline_rounded, color: Color(0xFFC0392B), size: 20),
-                  title: const Text('Delete', style: TextStyle(color: Color(0xFFC0392B))),
+                  leading: const Icon(Icons.delete_outline_rounded,
+                      color: Color(0xFFC0392B), size: 20),
+                  title: const Text('Delete',
+                      style: TextStyle(color: Color(0xFFC0392B))),
                   onTap: () {
                     messages.removeWhere((m) => m.id == message.id);
                     Get.back();
@@ -265,10 +264,104 @@ class ChatController extends GetxController {
   }
 
   void endSession() {
+    _chatService.endSession();
     messages.add(MessageModel.system('Session ended. Nothing was saved.'));
     _scrollToBottom();
-    Future.delayed(const Duration(seconds: 2), () {
-      Get.back();
-    });
+    isSendEnabled.value = false;
+    Future.delayed(const Duration(seconds: 2), () => Get.back());
+  }
+
+  // TODO(premium): Replace this with premium screen navigation when payment gateway is ready.
+  /// Shows a friendly bottom sheet when the daily 40-message limit is reached.
+  void _showDailyLimitDialog() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1E),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // drag handle
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A2A35),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF232329),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.hourglass_bottom_rounded,
+                    color: Color(0xFF8B7CF6),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "You're all caught up for today",
+                  style: TextStyle(
+                    color: Color(0xFFF0EEF4),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "You've used all 40 free messages for today.\nYour limit refills automatically tomorrow — come back then.",
+                  style: TextStyle(
+                    color: Color(0xFF8A8A9A),
+                    fontSize: 13,
+                    height: 1.5,
+                    decoration: TextDecoration.none,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B7CF6),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: const Text(
+                      'Got it',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      isDismissible: true,
+      enableDrag: true,
+    );
   }
 }

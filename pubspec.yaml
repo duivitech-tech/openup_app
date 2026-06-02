@@ -37,8 +37,17 @@ dependencies:
   # UUID generation
   uuid: ^4.3.3
 
+  # Socket.IO client for AI chat
+  socket_io_client: ^2.0.3+1
+
   # Date/time formatting
   intl: ^0.19.0
+
+  # URL launcher (for app update store link)
+  url_launcher: ^6.3.0
+
+  # Package info (versionCode / version name) for update-check
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:
