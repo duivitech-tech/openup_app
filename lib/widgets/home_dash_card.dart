@@ -76,22 +76,14 @@ class HomeDashCard extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Decorative icon
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.accentPurple.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.accentPurple.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: AppColors.accentPurple,
-              size: 26,
+          // App logo
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
             ),
           ),
 

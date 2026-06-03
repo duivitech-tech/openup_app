@@ -150,7 +150,7 @@ class ChatController extends GetxController {
         isSendEnabled.value = true;
         // TODO(premium): Navigate to premium screen when payment gateway is ready.
         // Get.toNamed(AppRoutes.premium);
-        _showDailyLimitDialog();
+        _showDailyLimitDialog(messagesLeft: deductResult.messagesLeft);
         return;
       }
 
@@ -168,7 +168,7 @@ class ChatController extends GetxController {
       isSendEnabled.value = true;
       // TODO(premium): Navigate to premium screen when payment gateway is ready.
       // Get.toNamed(AppRoutes.premium);
-      _showDailyLimitDialog();
+      _showDailyLimitDialog(messagesLeft: null);
     } on AppException catch (e) {
       debugPrint('[ChatController] AppException: ${e.message}');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
@@ -272,8 +272,25 @@ class ChatController extends GetxController {
   }
 
   // TODO(premium): Replace this with premium screen navigation when payment gateway is ready.
-  /// Shows a friendly bottom sheet when the daily 40-message limit is reached.
-  void _showDailyLimitDialog() {
+  /// Shows a friendly bottom sheet when the daily message limit is reached.
+  /// [messagesLeft] comes from the backend deduct response — null means the
+  /// value wasn't available (e.g. a 403 thrown before the response was parsed).
+  void _showDailyLimitDialog({int? messagesLeft}) {
+    // Build a human-readable subtitle from whatever the backend gave us.
+    final String subtitle;
+    if (messagesLeft != null && messagesLeft <= 0) {
+      subtitle =
+          "You've reached your daily message limit.\nYour limit refills automatically tomorrow — come back then.";
+    } else if (messagesLeft != null && messagesLeft > 0) {
+      // Shouldn't normally happen (allowed would be true), but handle gracefully.
+      subtitle =
+          "You have $messagesLeft message${messagesLeft == 1 ? '' : 's'} left today.\nYour limit refills automatically tomorrow.";
+    } else {
+      // No count available — generic copy.
+      subtitle =
+          "You've reached your daily message limit.\nYour limit refills automatically tomorrow — come back then.";
+    }
+
     Get.bottomSheet(
       Container(
         decoration: const BoxDecoration(
@@ -321,9 +338,9 @@ class ChatController extends GetxController {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  "You've used all 40 free messages for today.\nYour limit refills automatically tomorrow — come back then.",
-                  style: TextStyle(
+                Text(
+                  subtitle,
+                  style: const TextStyle(
                     color: Color(0xFF8A8A9A),
                     fontSize: 13,
                     height: 1.5,

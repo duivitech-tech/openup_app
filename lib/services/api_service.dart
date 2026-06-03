@@ -225,6 +225,22 @@ class ApiService extends GetxService {
     }
   }
 
+  /// DELETE /api/user/delete-account — Bearer accessToken
+  /// Permanently deletes the account and all related data.
+  Future<void> deleteAccount(String accessToken) async {
+    debugPrint('[ApiService] DELETE ${ApiConstants.deleteAccount}');
+    try {
+      final response = await _dio.delete(
+        ApiConstants.deleteAccount,
+        options: _bearer(accessToken),
+      );
+      debugPrint('[ApiService] deleteAccount response: ${response.statusCode} ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('[ApiService] deleteAccount DioException: ${e.response?.statusCode}');
+      throw _toDomainError(e);
+    }
+  }
+
   // ─── App ──────────────────────────────────────────────────────────────────────
 
   /// GET /api/app/update/check?platform=android&version=1.0.0&versionCode=1

@@ -22,7 +22,8 @@ class ApiConstants {
   // User endpoints
   static const String registerPremium = '/api/user/register-premium';
   static const String checkName       = '/api/user/check-name';
-  static const String userProfile     = '/api/user/profile';  // GET Bearer accessToken
+  static const String userProfile     = '/api/user/profile';         // GET Bearer accessToken
+  static const String deleteAccount   = '/api/user/delete-account';  // DELETE Bearer accessToken
 
   // App endpoints
   static const String checkAppUpdate  = '/api/app/update/check'; // GET ?platform=android&version=1.0.0&versionCode=1

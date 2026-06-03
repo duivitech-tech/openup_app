@@ -78,25 +78,43 @@ class ApiInterceptor extends Interceptor {
 
       if (!isAuthEndpoint && !_isRefreshing) {
         _isRefreshing = true;
-        try {
-          final newAccessToken = await _refreshToken();
-          _isRefreshing = false;
 
-          if (newAccessToken != null) {
-            // Retry original request with new token
-            debugPrint('[Interceptor] Retrying request with new accessToken');
+        // ── Step 1: refresh the token (isolated try-catch) ──────────────────
+        String? newAccessToken;
+        try {
+          newAccessToken = await _refreshToken();
+        } catch (e) {
+          debugPrint('[Interceptor] _refreshToken error: $e');
+        } finally {
+          _isRefreshing = false;
+        }
+
+        // ── Step 2: if we got a new token, retry the original request ────────
+        if (newAccessToken != null) {
+          debugPrint('[Interceptor] Retrying request with new accessToken');
+          try {
             final opts = err.requestOptions;
             opts.headers['Authorization'] = 'Bearer $newAccessToken';
             final dio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
             final retryResponse = await dio.fetch(opts);
             return handler.resolve(retryResponse);
+          } on DioException catch (retryErr) {
+            // The retry itself failed (e.g. 403 daily limit, 400, etc.).
+            // This is NOT a refresh failure — propagate it through the normal
+            // error-handling switch below so PaywallException / etc. fire correctly.
+            debugPrint('[Interceptor] Retry request failed (${retryErr.response?.statusCode}): forwarding error');
+            return handler.next(retryErr);
+          } catch (retryErr) {
+            debugPrint('[Interceptor] Retry request unexpected error: $retryErr');
+            return handler.next(DioException(
+              requestOptions: err.requestOptions,
+              error: retryErr,
+              type: DioExceptionType.unknown,
+            ));
           }
-        } catch (e) {
-          _isRefreshing = false;
-          debugPrint('[Interceptor] Refresh failed: $e');
         }
 
-        // Refresh failed — force logout
+        // ── Step 3: refresh failed — force logout ────────────────────────────
         debugPrint('[Interceptor] Session expired — forcing logout');
         await _forceLogout();
         return handler.reject(DioException(

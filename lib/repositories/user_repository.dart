@@ -176,6 +176,25 @@ class UserRepository extends GetxService {
     await _storage.clearUserData();
   }
 
+  /// Permanently deletes the account via DELETE /api/user/delete-account,
+  /// then wipes all local storage regardless of API result.
+  Future<void> deleteAccount() async {
+    debugPrint('[UserRepository] deleteAccount called');
+    final accessToken = await _storage.getAuthToken();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      try {
+        await _apiService.deleteAccount(accessToken);
+        debugPrint('[UserRepository] deleteAccount API success');
+      } catch (e) {
+        debugPrint('[UserRepository] deleteAccount API error (still clearing local data): $e');
+        rethrow; // Let the controller decide whether to continue
+      }
+    }
+    await _clearTokens();
+    await _storage.clearUserData();
+    debugPrint('[UserRepository] deleteAccount: all local data cleared');
+  }
+
   // ─── Private helpers ──────────────────────────────────────────────────────────
 
   Future<void> _persistSession({

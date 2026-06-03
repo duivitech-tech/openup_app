@@ -19,6 +19,8 @@ import '../modules/premium/register_view.dart';
 import '../modules/premium/register_binding.dart';
 import '../modules/profile/binding.dart';
 import '../modules/profile/view.dart';
+import '../modules/privacy_policy/view.dart';
+import '../modules/about_us/view.dart';
 
 /// All named route constants for the app.
 class AppRoutes {
@@ -33,6 +35,8 @@ class AppRoutes {
   static const String premium         = '/premium';
   static const String premiumRegister = '/premium/register';
   static const String profile         = '/profile';
+  static const String privacyPolicy   = '/privacy-policy';
+  static const String aboutUs         = '/about-us';
 }
 
 /// All GetPage definitions with bindings and transitions.
@@ -102,6 +106,18 @@ class AppPages {
       binding: ProfileBinding(),
       transition: Transition.fade,
       transitionDuration: const Duration(milliseconds: 200),
+    ),
+    GetPage(
+      name: AppRoutes.privacyPolicy,
+      page: () => const PrivacyPolicyView(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 250),
+    ),
+    GetPage(
+      name: AppRoutes.aboutUs,
+      page: () => const AboutUsView(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 250),
     ),
   ];
 }
