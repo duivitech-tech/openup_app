@@ -6,6 +6,7 @@ import '../../core/errors/app_exceptions.dart';
 import '../../repositories/payment_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/app_toast.dart';
 
 class PremiumController extends GetxController {
   late final PaymentRepository _paymentRepo;
@@ -61,9 +62,9 @@ class PremiumController extends GetxController {
         },
       );
     } on AppException catch (e) {
-      AppSnackbar.error(e.message);
+      AppToast.error(e.message);
     } catch (e) {
-      AppSnackbar.error('Payment initiation failed. Try again.');
+      AppToast.error('Payment initiation failed. Try again.');
     } finally {
       isLoading.value = false;
     }

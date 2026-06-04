@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../themes/app_theme.dart';
 import '../../widgets/app_bottom_nav_bar.dart';
 import '../../widgets/home_dash_card.dart';
+import '../../widgets/shimmer_loader.dart';
 // TODO(premium): Restore when payment gateway is ready.
 // import '../../widgets/text_link_button.dart';
 import '../profile/view.dart';
@@ -52,12 +53,17 @@ class _HomeTab extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Row(
                   children: [
-                    Obx(() => Text(
+                    Obx(() {
+                      if (c.isLoading.value) {
+                        return const ShimmerLoader(width: 140, height: 18, borderRadius: 6);
+                      }
+                      return Text(
                           'hey, ${c.alias.value}',
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
                           ),
-                        )),
+                        );
+                    }),
                   ],
                 ),
               ),
@@ -67,12 +73,20 @@ class _HomeTab extends StatelessWidget {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   const SizedBox(height: 12),
-                  Obx(() => HomeDashCard(
-                        isPremium: c.isPremium.value,
-                        onStartTalking: c.startChat,
-                      )),
+                  Obx(() {
+                    if (c.isLoading.value) {
+                      return const ShimmerLoader(height: 120, borderRadius: 16);
+                    }
+                    return HomeDashCard(
+                      isPremium: c.isPremium.value,
+                      onStartTalking: c.startChat,
+                    );
+                  }),
                   const SizedBox(height: 20),
                   Obx(() {
+                    if (c.isLoading.value) {
+                      return const ShimmerLoader(height: 52, borderRadius: 12);
+                    }
                     if (c.isPremium.value) return const SizedBox.shrink();
                     return _UsageStrip();
                   }),

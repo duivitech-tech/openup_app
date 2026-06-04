@@ -9,6 +9,7 @@ import '../../repositories/device_repository.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/app_toast.dart';
 
 enum AliasStatus { idle, checking, available, taken }
 
@@ -72,6 +73,7 @@ class IdentityController extends GetxController {
       debugPrint('[IdentityController] alias $value available=$available');
     } catch (e) {
       debugPrint('[IdentityController] alias check error: $e');
+      AppToast.error('Could not check alias availability.');
       aliasStatus.value = AliasStatus.idle;
     }
   }
@@ -87,7 +89,7 @@ class IdentityController extends GetxController {
     if (!formKey.currentState!.validate()) return;
 
     if (aliasStatus.value == AliasStatus.taken) {
-      AppSnackbar.error('This alias is taken. Try another or log in.');
+      AppToast.error('This alias is taken. Try another or log in.');
       return;
     }
 
@@ -95,7 +97,7 @@ class IdentityController extends GetxController {
     if (aliasStatus.value == AliasStatus.idle) {
       await _checkAlias();
       if (aliasStatus.value == AliasStatus.taken) {
-        AppSnackbar.error('This alias is taken. Try another or log in.');
+        AppToast.error('This alias is taken. Try another or log in.');
         return;
       }
     }
@@ -116,13 +118,13 @@ class IdentityController extends GetxController {
       Get.offAllNamed(AppRoutes.home);
     } on AlreadyRegisteredException {
       debugPrint('[IdentityController] AlreadyRegisteredException — prompt login');
-      AppSnackbar.error('This alias is taken. Try another or log in.');
+      AppToast.error('This alias is taken. Try another or log in.');
     } on AppException catch (e) {
       debugPrint('[IdentityController] AppException: ${e.message}');
-      AppSnackbar.error(e.message);
+      AppToast.error(e.message);
     } catch (e) {
       debugPrint('[IdentityController] Unexpected error: $e');
-      AppSnackbar.error('Signup failed. Please try again.');
+      AppToast.error('Signup failed. Please try again.');
     } finally {
       isLoading.value = false;
     }

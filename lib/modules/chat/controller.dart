@@ -11,6 +11,7 @@ import '../../repositories/device_repository.dart';
 import '../../services/chat_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/app_toast.dart';
 
 class ChatController extends GetxController {
   late final DeviceRepository _deviceRepo;
@@ -113,7 +114,7 @@ class ChatController extends GetxController {
       isAiTyping.value = false;
       isSendEnabled.value = true;
       _streamingMessageId = null;
-      AppSnackbar.error(error);
+      AppToast.error(error);
     };
 
     _chatService.onDisconnected = () {
@@ -174,13 +175,13 @@ class ChatController extends GetxController {
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
       isAiTyping.value = false;
       isSendEnabled.value = true;
-      AppSnackbar.error(e.message);
+      AppToast.error(e.message);
     } catch (e) {
       debugPrint('[ChatController] Unexpected error: $e');
       _updateMessageStatus(userMsg.id, MessageStatus.failed);
       isAiTyping.value = false;
       isSendEnabled.value = true;
-      AppSnackbar.error('Something went wrong. Try again.');
+      AppToast.error('Something went wrong. Try again.');
     }
   }
 

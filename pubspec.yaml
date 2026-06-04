@@ -49,6 +49,9 @@ dependencies:
   # Package info (versionCode / version name) for update-check
   package_info_plus: ^8.0.0
 
+  # Toast notifications
+  fluttertoast: ^8.2.8
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -9,6 +9,7 @@ import '../../repositories/device_repository.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/app_toast.dart';
 
 class LoginController extends GetxController {
   late final UserRepository _userRepo;
@@ -66,16 +67,16 @@ class LoginController extends GetxController {
       Get.offAllNamed(AppRoutes.home);
     } on InvalidCredentialsException catch (e) {
       debugPrint('[LoginController] InvalidCredentials: ${e.message}');
-      AppSnackbar.error(e.message);
+      AppToast.error(e.message);
     } on UserNotFoundException catch (e) {
       debugPrint('[LoginController] UserNotFound: ${e.message}');
-      AppSnackbar.error(e.message);
+      AppToast.error(e.message);
     } on AppException catch (e) {
       debugPrint('[LoginController] AppException: ${e.message}');
-      AppSnackbar.error(e.message);
+      AppToast.error(e.message);
     } catch (e) {
       debugPrint('[LoginController] Unexpected error: $e');
-      AppSnackbar.error('Login failed. Please try again.');
+      AppToast.error('Login failed. Please try again.');
     } finally {
       isLoading.value = false;
     }

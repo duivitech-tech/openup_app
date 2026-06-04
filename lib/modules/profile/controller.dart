@@ -6,6 +6,7 @@ import '../../models/user_model.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/app_toast.dart';
 
 class ProfileController extends GetxController {
   late final UserRepository _userRepo;
@@ -31,6 +32,7 @@ class ProfileController extends GetxController {
       debugPrint('[ProfileController] Loaded user: ${user.value}');
     } catch (e) {
       debugPrint('[ProfileController] _loadUser error: $e');
+      AppToast.error('Failed to load profile.');
       user.value = UserModel(alias: 'unknown');
     } finally {
       isLoading.value = false;
@@ -123,7 +125,7 @@ class ProfileController extends GetxController {
       Get.offAllNamed(AppRoutes.login);
     } catch (e) {
       debugPrint('[ProfileController] deleteAccount error: $e');
-      AppSnackbar.error('Failed to delete account. Please try again.');
+      AppToast.error('Failed to delete account. Please try again.');
     } finally {
       isDeleting.value = false;
     }

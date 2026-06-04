@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../repositories/payment_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/app_snackbar.dart';
+import '../../widgets/app_toast.dart';
 
 class PremiumRegisterController extends GetxController {
   late final PaymentRepository _paymentRepo;
@@ -40,7 +41,7 @@ class PremiumRegisterController extends GetxController {
       await Future.delayed(const Duration(milliseconds: 600));
       Get.offAllNamed(AppRoutes.home);
     } else {
-      AppSnackbar.error(
+      AppToast.error(
         'Payment pending — it may take a moment. Check back shortly.',
       );
       Get.offAllNamed(AppRoutes.home);
@@ -49,7 +50,7 @@ class PremiumRegisterController extends GetxController {
 
   void onPaymentFailed() {
     showWebView.value = false;
-    AppSnackbar.error('Payment was not completed. Please try again.');
+    AppToast.error('Payment was not completed. Please try again.');
     Get.back();
   }
 }

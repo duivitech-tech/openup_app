@@ -8,6 +8,7 @@ import '../../repositories/device_repository.dart';
 import '../../repositories/user_repository.dart';
 import '../../routes/app_routes.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/app_toast.dart';
 import '../../widgets/app_update_dialog.dart';
 
 class HomeController extends GetxController {
@@ -55,6 +56,7 @@ class HomeController extends GetxController {
       _deviceRepo.initDevice().ignore();
     } catch (e) {
       debugPrint('[HomeController] _loadData error (using cache): $e');
+      AppToast.error('Failed to load profile. Please try again.');
     } finally {
       isLoading.value = false;
     }
